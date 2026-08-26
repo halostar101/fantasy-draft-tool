@@ -10,9 +10,9 @@
 <body>
   <header class="site-header">
     <div>
-      <p class="eyebrow">2026 • ESPN • Half PPR</p>
+      <p class="eyebrow">2026 • ESPN • Half PPR • v2</p>
       <h1>Fantasy Draft Companion</h1>
-      <p class="subhead">Live draft board, replacement value, wait-or-pick guidance, and mock comparison.</p>
+      <p class="subhead">Live draft board, starter advantage, replacement value, two-pick lookahead, and mock comparison.</p>
     </div>
     <div class="header-actions">
       <button id="undoBtn" class="button secondary" type="button">Undo last pick</button>
@@ -76,7 +76,7 @@
             <p class="eyebrow">Decision support</p>
             <h2>Best choices right now</h2>
           </div>
-          <p class="hint">Recommendation blends replacement value, roster-aware lineup gain, ESPN rank as a market proxy, and the cost of waiting until your next pick.</p>
+          <p class="hint">Recommendation balances modeled starter advantage, a modest ESPN-rank prior, your roster, and a cross-position two-pick lookahead.</p>
         </div>
         <div id="recommendationCards" class="recommendation-grid"></div>
       </section>
@@ -111,8 +111,10 @@
                 <option value="recommendation">Recommendation</option>
                 <option value="rank">ESPN rank</option>
                 <option value="projection">Projection</option>
+                <option value="vols">VOLS</option>
                 <option value="vorp">VORP</option>
                 <option value="vona">Wait cost</option>
+                <option value="path">Two-pick path</option>
               </select>
             </label>
           </div>
@@ -125,8 +127,9 @@
                   <th>Player</th>
                   <th>Pos</th>
                   <th class="num">Proj</th>
+                  <th class="num">VOLS</th>
                   <th class="num">VORP</th>
-                  <th class="num">VONA</th>
+                  <th class="num">Wait</th>
                   <th class="num">Gone</th>
                   <th>Tier</th>
                   <th></th>
@@ -193,13 +196,13 @@
         <section class="panel">
           <h3>Player dataset</h3>
           <dl id="datasetInfo" class="definition-list"></dl>
-          <p class="footnote">The supplied PDF does not include ADP. V1 therefore uses ESPN overall rank as its market/draft-order proxy.</p>
+          <p class="footnote">The supplied PDF does not include ADP. ESPN overall rank is therefore used both for directional availability and as a modest value prior; the model is still allowed to disagree with ESPN.</p>
         </section>
 
         <section class="panel">
-          <h3>League replacement levels</h3>
+          <h3>League value baselines</h3>
           <div id="replacementLevels" class="replacement-grid"></div>
-          <p class="footnote">Replacement levels are modeled from required starters, FLEX demand, then seven bench spots filled by the best remaining QB/RB/WR/TE players in ESPN rank order.</p>
+          <p class="footnote">Each card shows the modeled last-starter baseline used by VOLS and the deeper waiver/replacement line used by VORP. FLEX demand is included separately for each league.</p>
         </section>
 
         <section class="panel backup-panel">
@@ -217,12 +220,14 @@
         </section>
 
         <section class="panel">
-          <h3>V1 methodology</h3>
+          <h3>V2 methodology</h3>
           <ul class="method-list">
-            <li><strong>VORP:</strong> projected points above the modeled replacement player at the same position.</li>
-            <li><strong>Lineup gain:</strong> how much a player improves your optimized starting lineup versus replacement placeholders.</li>
-            <li><strong>VONA:</strong> VORP lost if you wait for a same-position player expected around your next selection.</li>
-            <li><strong>Gone %:</strong> conditional estimate from ESPN rank; useful directionally, not a true ADP probability.</li>
+            <li><strong>VOLS:</strong> projected points above the modeled last starter at that position after league-wide FLEX demand is allocated.</li>
+            <li><strong>VORP:</strong> projected points above the deeper waiver/replacement line after modeled benches are filled.</li>
+            <li><strong>No double count:</strong> starter advantage and VORP are no longer simply added together; VORP mainly supplies a floor for bench/depth value.</li>
+            <li><strong>ESPN prior:</strong> ESPN rank contributes 35% of base value in the same value scale, accounting for information that point projections alone may miss without forcing the model to copy ESPN.</li>
+            <li><strong>Two-pick lookahead:</strong> for every candidate, the model estimates the best value likely to survive to your following pick across all positions and scores the combined path.</li>
+            <li><strong>Wait / Gone:</strong> same-position wait cost and directional disappearance probability still use ESPN rank because the source does not include ADP distributions.</li>
           </ul>
         </section>
       </div>

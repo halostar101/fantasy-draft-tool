@@ -29,12 +29,18 @@
   const SKILL_POSITIONS = new Set(['RB','WR','TE']);
   const BENCH_POSITIONS = new Set(['QB','RB','WR','TE']);
   const ALL_POSITIONS = ['QB','RB','WR','TE','D/ST','K'];
+  const MODEL = {
+    marketPriorWeight: 0.35,
+    benchVorpWeight: 0.22,
+    lookaheadCandidateLimit: 48
+  };
 
   let dataset = null;
   let players = [];
   let playerMap = new Map();
   let leagueModels = {};
   let tiers = {};
+  let recommendationCache = { key: null, recs: [] };
 
   const state = {
     currentDraft: null,
@@ -146,44 +152,92 @@
   }
 
   function computeLeagueModel(config) {
-    const drafted = new Set();
     const fixedPerTeam = { QB:1, RB:2, WR:2, TE:1, 'D/ST':1, K:1 };
 
+    // Starter baselines (VOLS): build the best projected league-wide starting pool,
+    // including FLEX demand. This is intentionally shallower than waiver replacement.
+    const starterIds = new Set();
+    const startersByPosition = Object.fromEntries(ALL_POSITIONS.map(pos => [pos, []]));
     for (const pos of ALL_POSITIONS) {
       const need = config.teams * fixedPerTeam[pos];
-      players.filter(p => p.position === pos).sort((a,b) => a.rank - b.rank).slice(0, need).forEach(p => drafted.add(p.id));
+      const chosen = players.filter(p => p.position === pos && Number.isFinite(p.projectedPoints))
+        .sort((a,b) => b.projectedPoints - a.projectedPoints || a.rank - b.rank)
+        .slice(0, need);
+      chosen.forEach(p => starterIds.add(p.id));
+      startersByPosition[pos].push(...chosen);
     }
+    const flexStarters = players.filter(p => SKILL_POSITIONS.has(p.position) && !starterIds.has(p.id) && Number.isFinite(p.projectedPoints))
+      .sort((a,b) => b.projectedPoints - a.projectedPoints || a.rank - b.rank)
+      .slice(0, config.teams * config.flex);
+    flexStarters.forEach(p => {
+      starterIds.add(p.id);
+      startersByPosition[p.position].push(p);
+    });
 
-    const flexNeed = config.teams * config.flex;
-    players.filter(p => SKILL_POSITIONS.has(p.position) && !drafted.has(p.id))
-      .sort((a,b) => a.rank - b.rank)
-      .slice(0, flexNeed)
-      .forEach(p => drafted.add(p.id));
+    const starterBaseline = {};
+    for (const pos of ALL_POSITIONS) {
+      const list = startersByPosition[pos];
+      starterBaseline[pos] = list.length ? Math.min(...list.map(p => p.projectedPoints)) : 0;
+    }
+    starterBaseline.FLEX = flexStarters.length
+      ? Math.min(...flexStarters.map(p => p.projectedPoints))
+      : Math.min(starterBaseline.RB || Infinity, starterBaseline.WR || Infinity, starterBaseline.TE || Infinity);
 
-    const benchNeed = config.teams * config.bench;
-    players.filter(p => BENCH_POSITIONS.has(p.position) && !drafted.has(p.id))
+    // Deep replacement (VORP): approximate the waiver line after starters + seven bench
+    // spots per team have been consumed in ESPN rank order.
+    const expectedDrafted = new Set();
+    for (const pos of ALL_POSITIONS) {
+      const need = config.teams * fixedPerTeam[pos];
+      players.filter(p => p.position === pos).sort((a,b) => a.rank - b.rank)
+        .slice(0, need).forEach(p => expectedDrafted.add(p.id));
+    }
+    players.filter(p => SKILL_POSITIONS.has(p.position) && !expectedDrafted.has(p.id))
       .sort((a,b) => a.rank - b.rank)
-      .slice(0, benchNeed)
-      .forEach(p => drafted.add(p.id));
+      .slice(0, config.teams * config.flex)
+      .forEach(p => expectedDrafted.add(p.id));
+    players.filter(p => BENCH_POSITIONS.has(p.position) && !expectedDrafted.has(p.id))
+      .sort((a,b) => a.rank - b.rank)
+      .slice(0, config.teams * config.bench)
+      .forEach(p => expectedDrafted.add(p.id));
 
     const replacement = {};
     for (const pos of ALL_POSITIONS) {
-      const pool = players.filter(p => p.position === pos && !drafted.has(p.id) && Number.isFinite(p.projectedPoints));
-      pool.sort((a,b) => b.projectedPoints - a.projectedPoints || a.rank - b.rank);
+      const pool = players.filter(p => p.position === pos && !expectedDrafted.has(p.id) && Number.isFinite(p.projectedPoints))
+        .sort((a,b) => b.projectedPoints - a.projectedPoints || a.rank - b.rank);
       replacement[pos] = pool[0] || null;
     }
-    const flexPool = players.filter(p => SKILL_POSITIONS.has(p.position) && !drafted.has(p.id) && Number.isFinite(p.projectedPoints));
-    flexPool.sort((a,b) => b.projectedPoints - a.projectedPoints || a.rank - b.rank);
+    const flexPool = players.filter(p => SKILL_POSITIONS.has(p.position) && !expectedDrafted.has(p.id) && Number.isFinite(p.projectedPoints))
+      .sort((a,b) => b.projectedPoints - a.projectedPoints || a.rank - b.rank);
     replacement.FLEX = flexPool[0] || null;
 
     const baseline = Object.fromEntries(Object.entries(replacement).map(([k,p]) => [k, p?.projectedPoints ?? 0]));
     const vorp = new Map();
+    const vols = new Map();
     players.forEach(p => {
-      const base = baseline[p.position] ?? 0;
-      vorp.set(p.id, Number.isFinite(p.projectedPoints) ? p.projectedPoints - base : null);
+      const pts = Number.isFinite(p.projectedPoints) ? p.projectedPoints : null;
+      vorp.set(p.id, pts === null ? null : pts - (baseline[p.position] ?? 0));
+      vols.set(p.id, pts === null ? null : pts - (starterBaseline[p.position] ?? 0));
     });
 
-    return { config, expectedDrafted: drafted, replacement, baseline, vorp };
+    // ESPN rank contains information the point projection does not (risk, expected role,
+    // expert ordering). Convert rank into the same value scale as VOLS, then use it only
+    // as a modest prior rather than forcing our order to match ESPN.
+    const structuralValues = players.map(p => {
+      const v = vorp.get(p.id);
+      const s = vols.get(p.id);
+      if (!Number.isFinite(v) || !Number.isFinite(s)) return null;
+      return Math.max(s, MODEL.benchVorpWeight * Math.max(0, v));
+    }).filter(Number.isFinite).sort((a,b) => b-a);
+    const marketPrior = new Map();
+    players.forEach(p => {
+      if (!structuralValues.length || !Number.isFinite(p.projectedPoints)) {
+        marketPrior.set(p.id, 0);
+      } else {
+        marketPrior.set(p.id, structuralValues[Math.min(p.rank - 1, structuralValues.length - 1)] || 0);
+      }
+    });
+
+    return { config, expectedDrafted, replacement, baseline, starterBaseline, startersByPosition, flexStarters, vorp, vols, marketPrior };
   }
 
   function computeTiers() {
@@ -240,9 +294,10 @@
     return slots;
   }
 
-  function lineupValue(rosterPlayers, config, model, useReplacement = true) {
+  function lineupValue(rosterPlayers, config, model, mode = 'starter') {
     const remaining = rosterPlayers.slice();
     let total = 0;
+    const baselines = mode === 'starter' ? model.starterBaseline : mode === 'replacement' ? model.baseline : null;
     const takeBestIndex = (predicate) => remaining.reduce((bestIdx,p,i) => {
       if (!predicate(p)) return bestIdx;
       if (bestIdx === -1) return i;
@@ -252,19 +307,20 @@
     for (const slot of config.rosterSlots) {
       const predicate = slot === 'FLEX' ? p => SKILL_POSITIONS.has(p.position) : p => p.position === slot;
       const idx = takeBestIndex(predicate);
-      const baseline = useReplacement ? (model.baseline[slot] || 0) : 0;
+      const baseline = baselines ? (baselines[slot] || 0) : 0;
       if (idx === -1) {
         total += baseline;
       } else {
         const p = remaining.splice(idx,1)[0];
-        total += useReplacement ? Math.max(baseline, safeNumber(p.projectedPoints,0)) : safeNumber(p.projectedPoints,0);
+        total += baselines ? Math.max(baseline, safeNumber(p.projectedPoints,0)) : safeNumber(p.projectedPoints,0);
       }
     }
     return total;
   }
 
-  function baselineLineupValue(config, model) {
-    return config.rosterSlots.reduce((sum, slot) => sum + (model.baseline[slot] || 0), 0);
+  function baselineLineupValue(config, model, mode = 'starter') {
+    const baselines = mode === 'replacement' ? model.baseline : model.starterBaseline;
+    return config.rosterSlots.reduce((sum, slot) => sum + (baselines[slot] || 0), 0);
   }
 
   function conditionalGoneProbability(player, fromPick, toPick) {
@@ -285,45 +341,120 @@
     return onClock ? nextUserPick(current + 1, draft) : nextUserPick(current, draft);
   }
 
+  function decisionContext(draft = state.currentDraft) {
+    const config = configFor(draft);
+    const current = currentOverallPick(draft);
+    if (current > totalPicks(config)) return { current, onClock:false, decisionPick:null, followingPick:null };
+    const onClock = teamAtPick(current, config) === draft.draftSlot;
+    const decisionPick = onClock ? current : nextUserPick(current, draft);
+    const followingPick = decisionPick ? nextUserPick(decisionPick + 1, draft) : null;
+    return { current, onClock, decisionPick, followingPick };
+  }
+
   function expectedAlternative(player, availablePlayers, targetPick) {
     const same = availablePlayers.filter(p => p.id !== player.id && p.position === player.position && Number.isFinite(p.projectedPoints));
-    if (!same.length) return null;
+    if (!same.length || !targetPick) return null;
     const atOrAfter = same.filter(p => p.rank >= targetPick).sort((a,b) => a.rank - b.rank);
     if (atOrAfter.length) return atOrAfter[0];
     return same.sort((a,b) => b.rank - a.rank)[0];
   }
 
-  function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft) {
+  function marginalRosterValue(player, rosterPlayers, draft = state.currentDraft) {
     const config = configFor(draft);
     const model = leagueModels[draft.leagueId];
-    const current = currentOverallPick(draft);
-    const target = decisionTargetPick(draft);
     const rawVorp = model.vorp.get(player.id);
-    const before = lineupValue(rosterPlayers, config, model, true);
-    const after = lineupValue(rosterPlayers.concat(player), config, model, true);
-    const lineupGain = Number.isFinite(player.projectedPoints) ? after - before : null;
-    const alt = target ? expectedAlternative(player, availablePlayers, target) : null;
-    const altVorp = alt ? model.vorp.get(alt.id) : null;
-    const vona = Number.isFinite(rawVorp) && Number.isFinite(altVorp) ? rawVorp - altVorp : null;
-    const gone = target ? conditionalGoneProbability(player, current, target) : 0;
-    const marketValue = current - player.rank;
-    const score = Number.isFinite(rawVorp)
-      ? safeNumber(lineupGain) + 0.25 * rawVorp + 0.65 * Math.max(0, safeNumber(vona)) * gone + Math.max(-8, Math.min(10, marketValue * 0.35))
-      : -Infinity;
+    const rawVols = model.vols.get(player.id);
+    if (!Number.isFinite(player.projectedPoints) || !Number.isFinite(rawVorp) || !Number.isFinite(rawVols)) {
+      return { rawVorp, rawVols, starterGain:null, structuralValue:null, marketPrior:0, decisionValue:null };
+    }
+    const before = lineupValue(rosterPlayers, config, model, 'starter');
+    const after = lineupValue(rosterPlayers.concat(player), config, model, 'starter');
+    const starterGain = after - before;
+    // Do not add VOLS and VORP together. A starter gets credit for the larger starter
+    // advantage; VORP acts mainly as a floor for bench/depth value.
+    const structuralValue = Math.max(0, starterGain, MODEL.benchVorpWeight * Math.max(0, rawVorp));
+    const fitFactor = starterGain > 0.5 ? 1 : 0.35;
+    const marketPrior = (model.marketPrior.get(player.id) || 0) * fitFactor;
+    const decisionValue = (1 - MODEL.marketPriorWeight) * structuralValue + MODEL.marketPriorWeight * marketPrior;
+    return { rawVorp, rawVols, starterGain, structuralValue, marketPrior, decisionValue };
+  }
+
+  function buildNextPickPool(availablePlayers, draft, context) {
+    if (!context.followingPick || !context.decisionPick) return [];
+    const model = leagueModels[draft.leagueId];
+    return availablePlayers.filter(p => Number.isFinite(p.projectedPoints)).map(p => {
+      const survival = 1 - conditionalGoneProbability(p, context.decisionPick, context.followingPick);
+      const structural = Math.max(model.vols.get(p.id) || 0, MODEL.benchVorpWeight * Math.max(0, model.vorp.get(p.id) || 0));
+      const prior = model.marketPrior.get(p.id) || 0;
+      const preValue = ((1 - MODEL.marketPriorWeight) * structural + MODEL.marketPriorWeight * prior) * survival;
+      return { player:p, survival, preValue };
+    }).filter(x => x.survival > 0.03 && x.preValue > 0)
+      .sort((a,b) => b.preValue - a.preValue || a.player.rank - b.player.rank)
+      .slice(0, MODEL.lookaheadCandidateLimit);
+  }
+
+  function expectedBestNextPick(firstPlayer, rosterPlayers, draft, context, nextPickPool) {
+    if (!context.followingPick || !context.decisionPick) return { expectedValue:0, likelyPlayer:null, likelyProbability:0 };
+    const nextRoster = rosterPlayers.concat(firstPlayer);
+    const options = nextPickPool.filter(x => x.player.id !== firstPlayer.id).map(x => {
+      const value = marginalRosterValue(x.player, nextRoster, draft);
+      return { player:x.player, value:value.decisionValue || 0, survival:x.survival };
+    }).filter(x => x.value > 0).sort((a,b) => b.value - a.value || a.player.rank - b.player.rank);
+
+    let remainingProbability = 1;
+    let expectedValue = 0;
+    let likelyPlayer = null;
+    let likelyProbability = 0;
+    for (const option of options) {
+      const takeProbability = remainingProbability * option.survival;
+      expectedValue += takeProbability * option.value;
+      if (takeProbability > likelyProbability) {
+        likelyProbability = takeProbability;
+        likelyPlayer = option.player;
+      }
+      remainingProbability *= (1 - option.survival);
+      if (remainingProbability < 0.003) break;
+    }
+    return { expectedValue, likelyPlayer, likelyProbability };
+  }
+
+  function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft, context = decisionContext(draft), nextPickPool = buildNextPickPool(availablePlayers, draft, context)) {
+    const model = leagueModels[draft.leagueId];
+    const value = marginalRosterValue(player, rosterPlayers, draft);
+    if (!Number.isFinite(value.decisionValue)) {
+      return { player, ...value, score:-Infinity, pathValue:null, waitCost:null, gone:0, beforeMyPick:0, alt:null, expectedNext:null, tier:null };
+    }
+
+    const alt = context.followingPick ? expectedAlternative(player, availablePlayers, context.followingPick) : null;
+    const altValue = alt ? marginalRosterValue(alt, rosterPlayers, draft).decisionValue : null;
+    const waitCost = Number.isFinite(altValue) ? value.decisionValue - altValue : null;
+    const gone = context.followingPick && context.decisionPick
+      ? conditionalGoneProbability(player, context.decisionPick, context.followingPick) : 0;
+    const beforeMyPick = !context.onClock && context.decisionPick
+      ? conditionalGoneProbability(player, context.current, context.decisionPick) : 0;
+    const expectedNext = expectedBestNextPick(player, rosterPlayers, draft, context, nextPickPool);
+    const pathValue = value.decisionValue + expectedNext.expectedValue;
+    const marketValue = context.decisionPick ? context.decisionPick - player.rank : 0;
+
+    // On your turn, score the two-pick path directly. Between your turns, modestly
+    // discount players unlikely to survive to your upcoming pick without hiding them.
+    const planningFactor = context.onClock ? 1 : (0.72 + 0.28 * (1 - beforeMyPick));
+    const score = pathValue * planningFactor;
     return {
-      player, rawVorp, lineupGain, alt, vona, gone, targetPick: target, marketValue, score,
+      player, ...value, alt, waitCost, vona:waitCost, gone, beforeMyPick, expectedNext,
+      pathValue, marketValue, score, targetPick:context.followingPick,
       tier: tiers[player.position]?.get(player.id) || null
     };
   }
 
   function recommendationReason(rec) {
     const pieces = [];
-    if (Number.isFinite(rec.lineupGain) && rec.lineupGain > 20) pieces.push(`adds ${fmt(rec.lineupGain)} pts over your current replacement-based lineup`);
-    else if (Number.isFinite(rec.rawVorp)) pieces.push(`${fmt(rec.rawVorp)} pts over modeled ${rec.player.position} replacement`);
-    if (Number.isFinite(rec.vona) && rec.vona > 10 && rec.alt) pieces.push(`waiting projects to cost about ${fmt(rec.vona)} VORP vs ${rec.alt.name}`);
-    if (rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())}`);
-    if (rec.marketValue >= 6) pieces.push(`has slipped ${rec.marketValue} picks past ESPN rank`);
-    if (!pieces.length) pieces.push('best blend of projection, replacement value, and current roster fit');
+    if (Number.isFinite(rec.starterGain) && rec.starterGain > 8) pieces.push(`adds ${fmt(rec.starterGain)} pts above the modeled starter baseline`);
+    else if (Number.isFinite(rec.rawVols)) pieces.push(`${fmt(rec.rawVols)} pts over the last modeled ${rec.player.position} starter`);
+    if (rec.expectedNext?.likelyPlayer && rec.targetPick) pieces.push(`two-pick lookahead most often pairs him with ${rec.expectedNext.likelyPlayer.name} around ${formatPick(rec.targetPick, configFor())}`);
+    if (Number.isFinite(rec.waitCost) && rec.waitCost > 8 && rec.alt) pieces.push(`waiting at ${rec.player.position} costs about ${fmt(rec.waitCost)} model-value vs ${rec.alt.name}`);
+    else if (rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())}`);
+    if (!pieces.length) pieces.push('best current blend of starter advantage, ESPN rank prior, roster fit, and next-pick opportunity cost');
     return pieces.slice(0,3).join('; ') + '.';
   }
 
@@ -381,10 +512,17 @@
   }
 
   function currentRecommendations() {
+    const draft = state.currentDraft;
+    const key = `${draft.id}|${draft.updatedAt}|${draft.leagueId}|${draft.draftSlot}|${draft.picks.length}`;
+    if (recommendationCache.key === key) return recommendationCache.recs;
     const drafted = draftedSet();
     const available = players.filter(p => !drafted.has(p.id));
     const roster = userRosterIds().map(id => playerMap.get(id)).filter(Boolean);
-    return available.map(p => recommendationFor(p, available, roster)).sort((a,b) => b.score - a.score || a.player.rank - b.player.rank);
+    const context = decisionContext(draft);
+    const nextPickPool = buildNextPickPool(available, draft, context);
+    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool)).sort((a,b) => b.score - a.score || a.player.rank - b.player.rank);
+    recommendationCache = { key, recs };
+    return recs;
   }
 
   function renderRecommendations() {
@@ -404,13 +542,15 @@
             <h3>${escapeHtml(p.name)} ${p.injuryStatus ? `<span class="status-badge">${p.injuryStatus}</span>` : ''}</h3>
             <div class="team-line">${escapeHtml(p.team)} • <span class="pos-badge">${p.position}</span> • Tier ${r.tier || '—'}</div>
           </div>
-          <span class="score-badge">${Math.round(r.score)} score</span>
+          <span class="score-badge">2-pick ${fmt(r.pathValue)}</span>
         </div>
         <div class="rec-metrics">
           <div><span>Projection</span><strong>${fmt(p.projectedPoints)}</strong></div>
+          <div><span>VOLS</span><strong>${fmt(r.rawVols)}</strong></div>
           <div><span>VORP</span><strong>${fmt(r.rawVorp)}</strong></div>
           <div><span>Gone if wait</span><strong>${pct(r.gone)}</strong></div>
         </div>
+        <div class="path-line"><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>
         <p class="rec-reason">${escapeHtml(recommendationReason(r))}</p>
         <button class="button draft-player" type="button" data-player-id="${p.id}">${teamAtPick(current, config) === state.currentDraft.draftSlot ? 'Draft to my team' : 'Mark drafted'}</button>
       </article>`;
@@ -421,10 +561,7 @@
   function renderBoard() {
     const config = configFor();
     const current = currentOverallPick();
-    const drafted = draftedSet();
-    const available = players.filter(p => !drafted.has(p.id));
-    const roster = userRosterIds().map(id => playerMap.get(id)).filter(Boolean);
-    let recs = available.map(p => recommendationFor(p, available, roster));
+    let recs = currentRecommendations().slice();
     const q = state.search.trim().toLowerCase();
     if (state.activePosition !== 'ALL') recs = recs.filter(r => r.player.position === state.activePosition);
     if (q) recs = recs.filter(r => `${r.player.name} ${r.player.team} ${r.player.position}`.toLowerCase().includes(q));
@@ -433,8 +570,10 @@
       recommendation: (a,b) => b.score - a.score || a.player.rank - b.player.rank,
       rank: (a,b) => a.player.rank - b.player.rank,
       projection: (a,b) => safeNumber(b.player.projectedPoints,-Infinity) - safeNumber(a.player.projectedPoints,-Infinity) || a.player.rank-b.player.rank,
+      vols: (a,b) => safeNumber(b.rawVols,-Infinity) - safeNumber(a.rawVols,-Infinity),
       vorp: (a,b) => safeNumber(b.rawVorp,-Infinity) - safeNumber(a.rawVorp,-Infinity),
-      vona: (a,b) => safeNumber(b.vona,-Infinity) - safeNumber(a.vona,-Infinity)
+      vona: (a,b) => safeNumber(b.waitCost,-Infinity) - safeNumber(a.waitCost,-Infinity),
+      path: (a,b) => safeNumber(b.pathValue,-Infinity) - safeNumber(a.pathValue,-Infinity)
     };
     recs.sort(sorters[state.sort] || sorters.recommendation);
 
@@ -448,15 +587,16 @@
         <td><div class="player-name">${escapeHtml(p.name)} ${p.injuryStatus ? `<span class="status-badge">${p.injuryStatus}</span>` : ''}</div><div class="player-meta">${escapeHtml(p.team)}</div></td>
         <td><span class="pos-badge">${p.position}</span></td>
         <td class="num">${fmt(p.projectedPoints)}</td>
+        <td class="num ${safeNumber(r.rawVols) >= 0 ? 'value-positive' : 'value-negative'}">${fmt(r.rawVols)}</td>
         <td class="num ${vClass}">${fmt(r.rawVorp)}</td>
-        <td class="num">${fmt(r.vona)}</td>
+        <td class="num">${fmt(r.waitCost)}</td>
         <td class="num ${goneClass}">${pct(r.gone)}</td>
         <td>${r.tier || '—'}</td>
         <td><button class="button tiny secondary draft-player" type="button" data-player-id="${p.id}" ${current > totalPicks(config) ? 'disabled' : ''}>${isMine ? 'Mine' : 'Drafted'}</button></td>
       </tr>`;
     }).join('');
     els.playerTableBody.querySelectorAll('.draft-player').forEach(btn => btn.addEventListener('click', () => draftPlayer(btn.dataset.playerId)));
-    els.boardFootnote.textContent = `${recs.length} available shown. “Gone” is a directional estimate derived from ESPN overall rank because the supplied PDF does not include ADP.`;
+    els.boardFootnote.textContent = `${recs.length} available shown. VOLS uses the modeled last starter; VORP uses the deeper waiver line. Recommendation uses a two-pick lookahead. “Gone” is directional because the PDF does not include ADP.`;
   }
 
   function renderRoster() {
@@ -561,8 +701,8 @@
     const model = leagueModels[mock.leagueId];
     const minePicks = (mock.picks || []).filter(p => p.isMine);
     const roster = minePicks.map(p => playerMap.get(p.playerId)).filter(Boolean);
-    const actualStarter = lineupValue(roster, config, model, false);
-    const aboveReplacement = lineupValue(roster, config, model, true) - baselineLineupValue(config, model);
+    const actualStarter = lineupValue(roster, config, model, 'none');
+    const aboveReplacement = lineupValue(roster, config, model, 'starter') - baselineLineupValue(config, model, 'starter');
     const rosterProjection = roster.reduce((sum,p) => sum + safeNumber(p.projectedPoints,0), 0);
     const espnValue = minePicks.reduce((sum,pick) => {
       const p = playerMap.get(pick.playerId);
@@ -586,7 +726,7 @@
       ['Draft slot', i => mocks[i].draftSlot],
       ['My roster', i => `${metrics[i].minePicks.length}/${rosterSize(metrics[i].config)}`],
       ['Starter projection', i => fmt(metrics[i].actualStarter)],
-      ['Starter gain vs replacement', i => fmt(metrics[i].aboveReplacement)],
+      ['Starter edge vs baseline', i => fmt(metrics[i].aboveReplacement)],
       ['Full roster projection', i => fmt(metrics[i].rosterProjection)],
       ['ESPN pick value', i => `${metrics[i].espnValue >= 0 ? '+' : ''}${Math.round(metrics[i].espnValue)}`],
       ['QB / RB / WR / TE', i => `${metrics[i].counts.QB} / ${metrics[i].counts.RB} / ${metrics[i].counts.WR} / ${metrics[i].counts.TE}`],
@@ -638,7 +778,8 @@
     const model = leagueModels[state.currentDraft.leagueId];
     els.replacementLevels.innerHTML = ALL_POSITIONS.map(pos => {
       const p = model.replacement[pos];
-      return `<div class="replacement-card"><span>${pos} replacement</span><strong>${p ? `${escapeHtml(p.name)} • ${fmt(p.projectedPoints)}` : '—'}</strong></div>`;
+      const starter = model.starterBaseline[pos];
+      return `<div class="replacement-card"><span>${pos} starter / replacement</span><strong>${fmt(starter)} / ${p ? fmt(p.projectedPoints) : '—'}</strong><small>${p ? `replacement: ${escapeHtml(p.name)}` : ''}</small></div>`;
     }).join('');
   }
 

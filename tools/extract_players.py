@@ -87,6 +87,10 @@ for rank in range(1,401):
     if rank==269: team='PIT'; pos='QB'; elig=['QB']
 
     toks=best_stats['stat_tokens']
+    # Rank 3 collides with a clipped page-continuation fragment later in the PDF.
+    # The actual Ja'Marr Chase row is on page 2 and is visually/procedurally verified.
+    if rank==3:
+        toks=['0','0','0','21','0','120','1509','11','0','0','0','0','277.7']
     if len(toks)!=13:
         # Anthony Richardson has dashes for every projected field; PyMuPDF catches them.
         if rank==337:
@@ -125,7 +129,8 @@ payload={
     'sourceCapturedAt':'2026-08-26T11:38:00-04:00',
     'scoringLabel':'Half PPR (per user; projected FPTS are taken from the supplied ESPN table)',
     'playerCount':400,
-    'notes':['ESPN overall rank is used as a market/draft-order proxy in v1; the supplied PDF does not contain ADP.','Anthony Richardson Sr. (rank 337) has no projected stat line in the supplied table.']
+    'modelDataVersion':'2026-08-26-v2',
+    'notes':['ESPN overall rank is used as a market/draft-order proxy; the supplied PDF does not contain ADP.','Anthony Richardson Sr. (rank 337) has no projected stat line in the supplied table.']
   },
   'players':players
 }

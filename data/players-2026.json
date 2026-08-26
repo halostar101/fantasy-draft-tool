@@ -5,8 +5,9 @@
     "sourceCapturedAt": "2026-08-26T11:38:00-04:00",
     "scoringLabel": "Half PPR (per user; projected FPTS are taken from the supplied ESPN table)",
     "playerCount": 400,
+    "modelDataVersion": "2026-08-26-v2",
     "notes": [
-      "ESPN overall rank is used as a market/draft-order proxy in v1; the supplied PDF does not contain ADP.",
+      "ESPN overall rank is used as a market/draft-order proxy; the supplied PDF does not contain ADP.",
       "Anthony Richardson Sr. (rank 337) has no projected stat line in the supplied table."
     ]
   },
@@ -75,21 +76,21 @@
         "WR"
       ],
       "injuryStatus": "Q",
-      "projectedPoints": 6.5,
+      "projectedPoints": 277.7,
       "stats": {
         "passingYards": 0,
         "passingTD": 0,
         "interceptionsThrown": 0,
-        "rushingYards": 0,
+        "rushingYards": 21,
         "rushingTD": 0,
-        "receptions": 6,
-        "receivingYards": 689,
-        "receivingTD": 3,
+        "receptions": 120,
+        "receivingYards": 1509,
+        "receivingTD": 11,
         "defensiveInterceptions": 0,
         "fumbleRecoveries": 0,
         "pointsAllowed": 0,
         "yardsAllowed": 0,
-        "fantasyPoints": 6.5
+        "fantasyPoints": 277.7
       }
     },
     {
