@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Fantasy Draft Companion</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">2026 • ESPN • Half PPR</p>
+      <h1>Fantasy Draft Companion</h1>
+      <p class="subhead">Live draft board, replacement value, wait-or-pick guidance, and mock comparison.</p>
+    </div>
+    <div class="header-actions">
+      <button id="undoBtn" class="button secondary" type="button">Undo last pick</button>
+      <button id="newDraftBtn" class="button danger-ghost" type="button">New draft</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="App sections">
+    <button class="tab active" type="button" data-tab="draft">Draft room</button>
+    <button class="tab" type="button" data-tab="mocks">Mock lab</button>
+    <button class="tab" type="button" data-tab="data">Data & backup</button>
+  </nav>
+
+  <main>
+    <section id="tab-draft" class="tab-panel active">
+      <section class="control-bar panel">
+        <label>
+          League
+          <select id="leagueSelect">
+            <option value="12">12-team • 1 FLEX</option>
+            <option value="10">10-team • 2 FLEX</option>
+          </select>
+        </label>
+        <label>
+          Draft slot
+          <input id="draftSlot" type="number" min="1" max="12" value="1" inputmode="numeric">
+        </label>
+        <label class="grow">
+          Draft name
+          <input id="draftName" type="text" maxlength="80" placeholder="e.g. 12-team mock — slot 6">
+        </label>
+        <button id="saveSnapshotBtn" class="button" type="button">Save mock snapshot</button>
+      </section>
+
+      <section class="draft-status-grid">
+        <article class="metric-card emphasis">
+          <span>Current pick</span>
+          <strong id="currentPickMetric">1.01</strong>
+          <small id="turnMetric">Your pick</small>
+        </article>
+        <article class="metric-card">
+          <span>Next pick</span>
+          <strong id="nextPickMetric">2.12</strong>
+          <small id="picksAwayMetric">— picks away</small>
+        </article>
+        <article class="metric-card">
+          <span>Your roster</span>
+          <strong id="rosterCountMetric">0 / 16</strong>
+          <small id="rosterNeedMetric">RB • WR • TE</small>
+        </article>
+        <article class="metric-card">
+          <span>Draft progress</span>
+          <strong id="progressMetric">0%</strong>
+          <small id="draftedMetric">0 / 192 drafted</small>
+        </article>
+      </section>
+
+      <section class="recommendation-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Decision support</p>
+            <h2>Best choices right now</h2>
+          </div>
+          <p class="hint">Recommendation blends replacement value, roster-aware lineup gain, ESPN rank as a market proxy, and the cost of waiting until your next pick.</p>
+        </div>
+        <div id="recommendationCards" class="recommendation-grid"></div>
+      </section>
+
+      <section class="draft-layout">
+        <div class="board-area panel">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Available players</p>
+              <h2>Draft board</h2>
+            </div>
+            <div id="dataStamp" class="data-stamp"></div>
+          </div>
+
+          <div class="board-controls">
+            <label class="search-label">
+              <span class="sr-only">Search players</span>
+              <input id="playerSearch" type="search" placeholder="Search player or team…" autocomplete="off">
+            </label>
+            <div id="positionFilters" class="filter-pills" aria-label="Position filters">
+              <button type="button" class="pill active" data-pos="ALL">All</button>
+              <button type="button" class="pill" data-pos="QB">QB</button>
+              <button type="button" class="pill" data-pos="RB">RB</button>
+              <button type="button" class="pill" data-pos="WR">WR</button>
+              <button type="button" class="pill" data-pos="TE">TE</button>
+              <button type="button" class="pill" data-pos="D/ST">D/ST</button>
+              <button type="button" class="pill" data-pos="K">K</button>
+            </div>
+            <label>
+              Sort
+              <select id="sortSelect">
+                <option value="recommendation">Recommendation</option>
+                <option value="rank">ESPN rank</option>
+                <option value="projection">Projection</option>
+                <option value="vorp">VORP</option>
+                <option value="vona">Wait cost</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="table-wrap">
+            <table class="player-table">
+              <thead>
+                <tr>
+                  <th>ESPN</th>
+                  <th>Player</th>
+                  <th>Pos</th>
+                  <th class="num">Proj</th>
+                  <th class="num">VORP</th>
+                  <th class="num">VONA</th>
+                  <th class="num">Gone</th>
+                  <th>Tier</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="playerTableBody"></tbody>
+            </table>
+          </div>
+          <p id="boardFootnote" class="footnote"></p>
+        </div>
+
+        <aside class="side-stack">
+          <section class="panel roster-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Your team</p>
+                <h2>Roster</h2>
+              </div>
+            </div>
+            <div id="rosterSlots" class="roster-slots"></div>
+          </section>
+
+          <section class="panel history-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Live log</p>
+                <h2>Recent picks</h2>
+              </div>
+            </div>
+            <ol id="draftHistory" class="draft-history"></ol>
+          </section>
+        </aside>
+      </section>
+    </section>
+
+    <section id="tab-mocks" class="tab-panel">
+      <section class="section-heading">
+        <div>
+          <p class="eyebrow">Saved locally</p>
+          <h2>Mock draft lab</h2>
+        </div>
+        <p class="hint">Save snapshots from the Draft Room, select two or more here, and compare roster construction and value captured.</p>
+      </section>
+      <div class="mock-layout">
+        <section class="panel">
+          <div id="savedMocksList" class="mock-list"></div>
+        </section>
+        <section class="panel compare-panel">
+          <div id="mockComparison" class="empty-state">Select at least two saved mocks to compare.</div>
+        </section>
+      </div>
+    </section>
+
+    <section id="tab-data" class="tab-panel">
+      <section class="section-heading">
+        <div>
+          <p class="eyebrow">Portable by design</p>
+          <h2>Data & backup</h2>
+        </div>
+        <p class="hint">Player data lives in the repo. Your active work autosaves in this browser; export a backup JSON whenever you want to commit your mocks back to GitHub.</p>
+      </section>
+
+      <div class="data-grid">
+        <section class="panel">
+          <h3>Player dataset</h3>
+          <dl id="datasetInfo" class="definition-list"></dl>
+          <p class="footnote">The supplied PDF does not include ADP. V1 therefore uses ESPN overall rank as its market/draft-order proxy.</p>
+        </section>
+
+        <section class="panel">
+          <h3>League replacement levels</h3>
+          <div id="replacementLevels" class="replacement-grid"></div>
+          <p class="footnote">Replacement levels are modeled from required starters, FLEX demand, then seven bench spots filled by the best remaining QB/RB/WR/TE players in ESPN rank order.</p>
+        </section>
+
+        <section class="panel backup-panel">
+          <h3>Mock backup</h3>
+          <p>Export your browser state as <code>draft-backup.json</code>. Replace <code>data/draft-backup.json</code> in the GitHub repo and commit it. A fresh browser will use that repo backup as its starting state.</p>
+          <div class="button-row">
+            <button id="exportBackupBtn" class="button" type="button">Export backup JSON</button>
+            <label class="button secondary file-button">
+              Import backup JSON
+              <input id="importBackupInput" type="file" accept="application/json,.json">
+            </label>
+            <button id="reloadRepoBackupBtn" class="button secondary" type="button">Reload repo backup</button>
+          </div>
+          <p id="backupStatus" class="status-message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel">
+          <h3>V1 methodology</h3>
+          <ul class="method-list">
+            <li><strong>VORP:</strong> projected points above the modeled replacement player at the same position.</li>
+            <li><strong>Lineup gain:</strong> how much a player improves your optimized starting lineup versus replacement placeholders.</li>
+            <li><strong>VONA:</strong> VORP lost if you wait for a same-position player expected around your next selection.</li>
+            <li><strong>Gone %:</strong> conditional estimate from ESPN rank; useful directionally, not a true ADP probability.</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Built as a static browser app — no backend or database required.</span>
+    <span id="saveIndicator" aria-live="polite">Ready</span>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
