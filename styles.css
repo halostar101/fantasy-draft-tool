@@ -74,7 +74,7 @@ input:focus, select:focus, button:focus-visible { outline: 3px solid rgba(49,87,
 .score-badge { padding: 6px 8px; background: var(--accent-soft); color: var(--accent); font-size: .78rem; }
 .pos-badge { padding: 3px 7px; background: #eef1f6; color: #3f4a5f; font-size: .72rem; }
 .status-badge { padding: 2px 6px; background: var(--warn-soft); color: var(--warn); font-size: .68rem; }
-.rec-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.rec-metrics { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
 .rec-metrics div { background: var(--panel-2); border-radius: 9px; padding: 8px; }
 .rec-metrics span { display: block; color: var(--muted); font-size: .69rem; }
 .rec-metrics strong { font-size: .9rem; }

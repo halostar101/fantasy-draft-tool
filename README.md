@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.3
+# Fantasy Draft Companion (2026) — v2.4
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -12,8 +12,8 @@ No backend, MySQL, Node server, or account system is required.
 - Tracks every pick in a snake draft and recognizes your draft slot.
 - Shows ESPN rank, projection, VOLS, VORP, same-position wait cost, tier, and directional availability.
 - Keeps the **Draft Board** ordered by current player value if the player is available now.
-- Before your turn, shows a separate **Likely Targets** list based on player value × estimated chance of reaching your upcoming pick.
-- Once you are on the clock, keeps the **two-pick cross-position view** for immediate context and automatically runs a **four-selection Monte Carlo outlook** across your current pick plus up to three future selections.
+- Before your turn, shows a separate **Priority Targets** list that combines roster relevance, chance of reaching your upcoming pick, and urgency if the player is also likely to survive another turn.
+- Once you are on the clock, keeps the **two-pick cross-position view** for immediate context and automatically runs a **four-selection Monte Carlo outlook** across your current pick plus up to three future selections, with rational-path constraints.
 - Uses ESPN rank as a **modest value prior**, rather than either copying ESPN or ignoring it.
 - Autosaves the active draft and saved mocks in browser storage.
 - Saves mock snapshots and compares two or more mock teams.
@@ -36,6 +36,17 @@ No backend, MySQL, Node server, or account system is required.
 - Example: in a 12-team draft from slot 11 at pick 1.01, ESPN ranks 1 and 2 now show roughly **98% and 97%** chance of being gone before 1.11, rather than about 41%.
 
 
+
+
+## v2.4 roster relevance + urgency update
+
+- Future simulated picks no longer take an RB/WR/TE that would go directly to the bench while an RB/WR/FLEX starting slot is still open. This removes irrational paths such as RB → RB → RB → RB when the fourth RB cannot enter the lineup and starting WR slots remain empty.
+- The constraint is deliberately **not** "fill every position immediately." Once RB/WR/FLEX capacity is occupied, the simulation may still build RB/WR depth while QB or TE remains open, preserving viable late-QB and late-TE strategies.
+- At the four-pick horizon, empty RB/WR/FLEX slots receive no assumed future points. Empty QB/TE slots receive a conservative 88% of the modeled last-starter baseline so the simulation does not artificially force an early QB/TE simply because its horizon ends.
+- **Priority Targets** now hide already-covered positions unless the candidate would actually improve the starting lineup. For example, a third RB is still relevant when FLEX is open; a fourth RB is not a featured target when it would go straight to the bench and WR slots remain open. Redundant backup QB/TE targets are also suppressed unless they improve a starter/FLEX spot.
+- Added an explicit **Urgency** measure. Player value remains unchanged on the Draft Board, but target priority now discounts players who are likely to survive not only to your upcoming pick but also to the following turn.
+- D/ST and K remain visible on the Draft Board, but recommendation cards suppress them while offensive starters are incomplete and continue to defer them while the model thinks they are safely waitable. They become recommendation-eligible as their next-turn availability becomes genuinely urgent.
+- The four-pick score is now labeled **horizon points**, because it can include conservative deferred QB/TE credit rather than pretending every point is already attached to a drafted starter.
 
 ## v2.3 four-pick Monte Carlo outlook
 
@@ -90,7 +101,7 @@ After extracting/overwriting the changed files:
 ```bash
 git status
 git add .
-git commit -m "Separate player value from target availability"
+git commit -m "Refine roster paths and urgency"
 git push
 ```
 
@@ -117,17 +128,18 @@ python tools/extract_players.py "Pre-Draft Strategy Data.pdf" data/players-2026.
 python tools/validate_players.py "Pre-Draft Strategy Data.pdf" data/players-2026.json
 ```
 
-## v2.3 valuation model
+## v2.4 valuation model
 
 - **VOLS:** projected points above the modeled last starter at the same position. Starter baselines include the league's FLEX demand.
 - **VORP:** projected points above a deeper replacement/waiver baseline after starters and seven bench spots per team are modeled.
 - **Roster value:** the model uses the larger of actual starter-lineup improvement and a small fraction of VORP for bench/depth value; it does not add full VOLS and VORP together.
 - **ESPN prior:** 35% of base decision value comes from ESPN rank translated onto the same structural-value scale. This is intended as a risk/role prior, not a requirement to follow ESPN order.
 - **Current value:** roster-aware player value if the player is available now. This drives the default Draft Board order and is not adjusted for availability.
-- **Likely-target score:** before your turn only, current value × estimated chance the player survives to your upcoming pick. This drives the planning cards, not the Draft Board.
+- **Priority-target score:** before your turn only, current value × estimated chance the player survives to your upcoming pick × an urgency factor based on whether he is likely to disappear or the position is likely to drop before your following pick. This drives the planning cards, not the Draft Board.
 - **Immediate two-pick path:** candidate-now value plus the probability-weighted value of the best players likely to survive to your following selection, across all positions. It remains visible as a short-horizon diagnostic.
-- **Four-pick Monte Carlo outlook:** automatic rank-driven simulations extend the decision through up to three more of your picks, allowing the model to see roster-construction effects such as delaying both starting WR spots after an RB/RB opening.
+- **Four-pick Monte Carlo outlook:** automatic rank-driven simulations extend the decision through up to three more of your picks. Future user selections are constrained to rational roster paths while core RB/WR/FLEX capacity remains open, and the terminal horizon gives conservative deferred credit only to empty QB/TE slots so late-singleton strategies remain possible.
 - **Wait cost:** difference between the current player's model value and a same-position alternative around the following pick.
+- **Urgency:** a directional 0–100% planning signal combining gone-if-wait risk with the relative same-position value drop. It affects recommendation/target timing, not intrinsic Draft Board value.
 - **Gone %:** directional conditional estimate based on ESPN rank. The rank is treated as the center of a truncated draft-position curve with tighter uncertainty for elite players and wider uncertainty later. While waiting for your turn it reports the chance the player is gone before your upcoming pick; on your turn it reports the chance he is gone before your following pick if you pass. It is not a true ADP probability because the source PDF has no ADP distribution.
 
 This is a decision aid, not a claim that the projections or availability estimates are exact.
