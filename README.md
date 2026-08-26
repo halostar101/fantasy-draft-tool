@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2
+# Fantasy Draft Companion (2026) — v2.1
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -27,6 +27,13 @@ No backend, MySQL, Node server, or account system is required.
 5. Added a 35% ESPN-rank prior to acknowledge information that a point projection alone does not capture (risk, role, expert ordering) while still allowing the model to disagree with ESPN.
 6. Added cross-position **two-pick lookahead** so the tool evaluates paths such as RB → WR versus WR → RB, not only the first player in isolation.
 
+## v2.1 availability + usability update
+
+- Added hover tooltips to every Draft Board header so VOLS, VORP, Wait, Gone, tiers, and source columns are easy to decode.
+- Fixed the **Gone % display semantics**. While you are waiting for your turn, Gone now shows the chance a player disappears before your *upcoming* pick. Once you are on the clock, it switches to the chance he disappears before your *following* pick if you pass.
+- Recalibrated the ESPN-rank availability heuristic. The old curve was too wide for elite players and assigned impossible probability mass before pick 1. The new rank-centered curve is truncated at the start of the draft, is much tighter near the top, and widens gradually later.
+- Example: in a 12-team draft from slot 11 at pick 1.01, ESPN ranks 1 and 2 now show roughly **98% and 97%** chance of being gone before 1.11, rather than about 41%.
+
 ## Run locally
 
 From the project directory:
@@ -51,16 +58,16 @@ Then open the local URL shown in the terminal.
 4. Select `main` and `/ (root)`.
 5. Save. GitHub Pages will redeploy after each push.
 
-## Updating an existing repo to v2
+## Updating an existing repo
 
-The provided `fantasy-draft-tool-v2-update.zip` is designed to be extracted **into the root of your existing local repository**. It intentionally does **not** contain `data/draft-backup.json`, so it will not overwrite a committed mock backup.
+The provided update ZIP is designed to be extracted **into the root of your existing local repository**. It intentionally does **not** contain `data/draft-backup.json`, so it will not overwrite a committed mock backup.
 
 After extracting/overwriting the changed files:
 
 ```bash
 git status
 git add .
-git commit -m "Improve draft valuation model"
+git commit -m "Fix availability model and add board tooltips"
 git push
 ```
 
@@ -95,6 +102,6 @@ python tools/validate_players.py "Pre-Draft Strategy Data.pdf" data/players-2026
 - **ESPN prior:** 35% of base decision value comes from ESPN rank translated onto the same structural-value scale. This is intended as a risk/role prior, not a requirement to follow ESPN order.
 - **Two-pick path:** candidate-now value plus the probability-weighted value of the best players likely to survive to your next selection, across all positions.
 - **Wait cost:** difference between the current player's model value and a same-position alternative around the following pick.
-- **Gone %:** directional conditional estimate based on ESPN rank. It is not a true ADP probability because the source PDF has no ADP distribution.
+- **Gone %:** directional conditional estimate based on ESPN rank. The rank is treated as the center of a truncated draft-position curve with tighter uncertainty for elite players and wider uncertainty later. While waiting for your turn it reports the chance the player is gone before your upcoming pick; on your turn it reports the chance he is gone before your following pick if you pass. It is not a true ADP probability because the source PDF has no ADP distribution.
 
 This is a decision aid, not a claim that the projections or availability estimates are exact.

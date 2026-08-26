@@ -10,7 +10,7 @@
 <body>
   <header class="site-header">
     <div>
-      <p class="eyebrow">2026 • ESPN • Half PPR • v2</p>
+      <p class="eyebrow">2026 • ESPN • Half PPR • v2.1</p>
       <h1>Fantasy Draft Companion</h1>
       <p class="subhead">Live draft board, starter advantage, replacement value, two-pick lookahead, and mock comparison.</p>
     </div>
@@ -123,15 +123,15 @@
             <table class="player-table">
               <thead>
                 <tr>
-                  <th>ESPN</th>
-                  <th>Player</th>
-                  <th>Pos</th>
-                  <th class="num">Proj</th>
-                  <th class="num">VOLS</th>
-                  <th class="num">VORP</th>
-                  <th class="num">Wait</th>
-                  <th class="num">Gone</th>
-                  <th>Tier</th>
+                  <th><abbr class="header-help" title="ESPN overall pre-draft rank from the supplied PDF. Used as a market-value prior and as the availability proxy because the PDF has no ADP distribution.">ESPN</abbr></th>
+                  <th><span class="header-help" title="Player name, NFL team, and any injury-status badge captured from ESPN.">Player</span></th>
+                  <th><abbr class="header-help" title="Fantasy position: QB, RB, WR, TE, D/ST, or K.">Pos</abbr></th>
+                  <th class="num"><abbr class="header-help" title="Projected season fantasy points from the supplied ESPN pre-draft data.">Proj</abbr></th>
+                  <th class="num"><abbr class="header-help" title="Value Over Last Starter: projected points above the modeled last starter at the same position. The starter pool includes league-specific FLEX demand.">VOLS</abbr></th>
+                  <th class="num"><abbr class="header-help" title="Value Over Replacement Player: projected points above the deeper modeled waiver/replacement player after starters and benches are filled.">VORP</abbr></th>
+                  <th class="num"><span class="header-help" title="Same-position wait cost: how much model value you give up if you pass now and use the likely same-position alternative around your following pick. Positive means waiting is costly.">Wait</span></th>
+                  <th class="num"><span class="header-help" title="Availability estimate. While you are waiting for your turn, this is the chance the player is drafted before your upcoming pick. When you are on the clock, it becomes the chance he is gone before your following pick if you pass. It is rank-based, not true ADP.">Gone</span></th>
+                  <th><span class="header-help" title="Projection-based positional tier. A new tier begins at a comparatively large projected-point drop within that position.">Tier</span></th>
                   <th></th>
                 </tr>
               </thead>
@@ -220,14 +220,14 @@
         </section>
 
         <section class="panel">
-          <h3>V2 methodology</h3>
+          <h3>V2.1 methodology</h3>
           <ul class="method-list">
             <li><strong>VOLS:</strong> projected points above the modeled last starter at that position after league-wide FLEX demand is allocated.</li>
             <li><strong>VORP:</strong> projected points above the deeper waiver/replacement line after modeled benches are filled.</li>
             <li><strong>No double count:</strong> starter advantage and VORP are no longer simply added together; VORP mainly supplies a floor for bench/depth value.</li>
             <li><strong>ESPN prior:</strong> ESPN rank contributes 35% of base value in the same value scale, accounting for information that point projections alone may miss without forcing the model to copy ESPN.</li>
             <li><strong>Two-pick lookahead:</strong> for every candidate, the model estimates the best value likely to survive to your following pick across all positions and scores the combined path.</li>
-            <li><strong>Wait / Gone:</strong> same-position wait cost and directional disappearance probability still use ESPN rank because the source does not include ADP distributions.</li>
+            <li><strong>Wait / Gone:</strong> wait cost uses the same-position alternative around your following pick. Gone % uses a rank-centered, truncated availability curve that is tighter for elite players and gradually wider later in the draft. Before your turn it means “gone by my upcoming pick”; on your turn it means “gone by my following pick if I pass.” It is still a heuristic because the source does not include ADP distributions.</li>
           </ul>
         </section>
       </div>

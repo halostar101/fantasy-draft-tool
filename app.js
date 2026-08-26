@@ -325,12 +325,27 @@
 
   function conditionalGoneProbability(player, fromPick, toPick) {
     if (!player || !toPick || toPick <= fromPick) return 0;
-    const rank = player.rank;
-    const sigma = Math.max(5, Math.min(18, 4 + rank * 0.06));
-    const cdf = (x) => 1 / (1 + Math.exp(-(x - rank) / sigma));
-    const survivalFrom = Math.max(0.005, 1 - cdf(Math.max(0, fromPick - 1)));
-    const survivalTo = Math.max(0.0001, 1 - cdf(Math.max(0, toPick - 1)));
-    return Math.max(0, Math.min(0.995, 1 - survivalTo / survivalFrom));
+
+    // The source has ESPN rank, not an ADP distribution. Treat rank as the center of a
+    // heuristic draft-position distribution: elite players have a tighter range and
+    // later players are allowed more draft-room variance. Truncating the distribution
+    // before pick 1 avoids the old model's unrealistic probability mass before a draft
+    // had even started.
+    const rank = Math.max(1, safeNumber(player.rank, 1));
+    const sigma = Math.max(2, Math.min(12, 2 + rank * 0.08));
+    const rawCdf = (x) => 1 / (1 + Math.exp(-(x - rank) / sigma));
+    const lowerMass = rawCdf(0.5);
+    const truncatedCdf = (x) => Math.max(0, Math.min(1, (rawCdf(x) - lowerMass) / Math.max(1e-6, 1 - lowerMass)));
+
+    // Available at fromPick means the player survived all selections before that pick.
+    // toPick is exclusive: from 1 to 11 means "drafted somewhere in picks 1-10".
+    const fromBoundary = Math.max(0.5, fromPick - 0.5);
+    const toBoundary = Math.max(fromBoundary, toPick - 0.5);
+    const goneBeforeFrom = truncatedCdf(fromBoundary);
+    const goneBeforeTo = truncatedCdf(toBoundary);
+    const survivalAtFrom = Math.max(1e-6, 1 - goneBeforeFrom);
+    const conditional = (goneBeforeTo - goneBeforeFrom) / survivalAtFrom;
+    return Math.max(0, Math.min(0.995, conditional));
   }
 
   function decisionTargetPick(draft = state.currentDraft) {
@@ -449,11 +464,13 @@
 
   function recommendationReason(rec) {
     const pieces = [];
+    const context = decisionContext();
     if (Number.isFinite(rec.starterGain) && rec.starterGain > 8) pieces.push(`adds ${fmt(rec.starterGain)} pts above the modeled starter baseline`);
     else if (Number.isFinite(rec.rawVols)) pieces.push(`${fmt(rec.rawVols)} pts over the last modeled ${rec.player.position} starter`);
     if (rec.expectedNext?.likelyPlayer && rec.targetPick) pieces.push(`two-pick lookahead most often pairs him with ${rec.expectedNext.likelyPlayer.name} around ${formatPick(rec.targetPick, configFor())}`);
     if (Number.isFinite(rec.waitCost) && rec.waitCost > 8 && rec.alt) pieces.push(`waiting at ${rec.player.position} costs about ${fmt(rec.waitCost)} model-value vs ${rec.alt.name}`);
-    else if (rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())}`);
+    else if (!context.onClock && rec.beforeMyPick >= .65 && context.decisionPick) pieces.push(`${pct(rec.beforeMyPick)} directional chance of going before your upcoming pick ${formatPick(context.decisionPick, configFor())}`);
+    else if (context.onClock && rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())} if you pass`);
     if (!pieces.length) pieces.push('best current blend of starter advantage, ESPN rank prior, roster fit, and next-pick opportunity cost');
     return pieces.slice(0,3).join('; ') + '.';
   }
@@ -528,6 +545,7 @@
   function renderRecommendations() {
     const config = configFor();
     const current = currentOverallPick();
+    const context = decisionContext();
     if (current > totalPicks(config)) {
       els.recommendationCards.innerHTML = '<div class="empty-state panel">Draft complete. Save this draft as a mock to compare it in Mock Lab.</div>';
       return;
@@ -535,6 +553,8 @@
     const recs = currentRecommendations().filter(r => Number.isFinite(r.score)).slice(0,3);
     els.recommendationCards.innerHTML = recs.map((r,i) => {
       const p = r.player;
+      const displayedGone = context.onClock ? r.gone : r.beforeMyPick;
+      const goneLabel = context.onClock ? 'Gone if wait' : 'Gone by my pick';
       return `<article class="rec-card">
         <div class="rec-rank">
           <div>
@@ -548,7 +568,7 @@
           <div><span>Projection</span><strong>${fmt(p.projectedPoints)}</strong></div>
           <div><span>VOLS</span><strong>${fmt(r.rawVols)}</strong></div>
           <div><span>VORP</span><strong>${fmt(r.rawVorp)}</strong></div>
-          <div><span>Gone if wait</span><strong>${pct(r.gone)}</strong></div>
+          <div><span>${goneLabel}</span><strong>${pct(displayedGone)}</strong></div>
         </div>
         <div class="path-line"><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>
         <p class="rec-reason">${escapeHtml(recommendationReason(r))}</p>
@@ -561,6 +581,7 @@
   function renderBoard() {
     const config = configFor();
     const current = currentOverallPick();
+    const context = decisionContext();
     let recs = currentRecommendations().slice();
     const q = state.search.trim().toLowerCase();
     if (state.activePosition !== 'ALL') recs = recs.filter(r => r.player.position === state.activePosition);
@@ -580,7 +601,8 @@
     const isMine = current <= totalPicks(config) && teamAtPick(current,config) === state.currentDraft.draftSlot;
     els.playerTableBody.innerHTML = recs.map(r => {
       const p = r.player;
-      const goneClass = r.gone >= .65 ? 'gone-high' : r.gone >= .35 ? 'gone-medium' : '';
+      const displayedGone = context.onClock ? r.gone : r.beforeMyPick;
+      const goneClass = displayedGone >= .65 ? 'gone-high' : displayedGone >= .35 ? 'gone-medium' : '';
       const vClass = safeNumber(r.rawVorp) >= 0 ? 'value-positive' : 'value-negative';
       return `<tr>
         <td>${p.rank}</td>
@@ -590,13 +612,16 @@
         <td class="num ${safeNumber(r.rawVols) >= 0 ? 'value-positive' : 'value-negative'}">${fmt(r.rawVols)}</td>
         <td class="num ${vClass}">${fmt(r.rawVorp)}</td>
         <td class="num">${fmt(r.waitCost)}</td>
-        <td class="num ${goneClass}">${pct(r.gone)}</td>
+        <td class="num ${goneClass}">${pct(displayedGone)}</td>
         <td>${r.tier || '—'}</td>
         <td><button class="button tiny secondary draft-player" type="button" data-player-id="${p.id}" ${current > totalPicks(config) ? 'disabled' : ''}>${isMine ? 'Mine' : 'Drafted'}</button></td>
       </tr>`;
     }).join('');
     els.playerTableBody.querySelectorAll('.draft-player').forEach(btn => btn.addEventListener('click', () => draftPlayer(btn.dataset.playerId)));
-    els.boardFootnote.textContent = `${recs.length} available shown. VOLS uses the modeled last starter; VORP uses the deeper waiver line. Recommendation uses a two-pick lookahead. “Gone” is directional because the PDF does not include ADP.`;
+    const goneMeaning = context.onClock
+      ? `chance the player is drafted before your following pick ${formatPick(context.followingPick, config)} if you pass`
+      : `chance the player is drafted before your upcoming pick ${formatPick(context.decisionPick, config)}`;
+    els.boardFootnote.textContent = `${recs.length} available shown. VOLS uses the modeled last starter; VORP uses the deeper waiver line. Recommendation uses a two-pick lookahead. “Gone” is the ${goneMeaning}; it is a heuristic based on ESPN rank because the PDF does not include ADP.`;
   }
 
   function renderRoster() {

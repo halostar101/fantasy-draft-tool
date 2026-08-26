@@ -90,6 +90,14 @@ input:focus, select:focus, button:focus-visible { outline: 3px solid rgba(49,87,
 .pill { min-height: 36px; border-radius: 999px; padding: 6px 10px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); font-weight: 750; font-size: .78rem; }
 .pill.active { background: var(--accent-soft); border-color: #b8c5f8; color: var(--accent); }
 
+
+.header-help {
+  text-decoration: underline dotted currentColor;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+abbr.header-help { text-decoration-line: underline; text-decoration-style: dotted; border-bottom: 0; }
+
 .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 10px; max-height: 690px; }
 table { border-collapse: collapse; width: 100%; }
 th { position: sticky; top: 0; z-index: 2; background: #f3f5f9; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; text-align: left; }
