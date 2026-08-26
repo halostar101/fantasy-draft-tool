@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.1
+# Fantasy Draft Companion (2026) — v2.2
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -11,8 +11,9 @@ No backend, MySQL, Node server, or account system is required.
 
 - Tracks every pick in a snake draft and recognizes your draft slot.
 - Shows ESPN rank, projection, VOLS, VORP, same-position wait cost, tier, and directional availability.
-- Recalculates roster-aware recommendations after every pick.
-- Uses a **two-pick cross-position lookahead**: for each candidate now, it estimates the best value likely to remain at your following selection.
+- Keeps the **Draft Board** ordered by current player value if the player is available now.
+- Before your turn, shows a separate **Likely Targets** list based on player value × estimated chance of reaching your upcoming pick.
+- Once you are on the clock, uses a **two-pick cross-position lookahead** to compare the actual choices available now plus the value likely to remain at your following selection.
 - Uses ESPN rank as a **modest value prior**, rather than either copying ESPN or ignoring it.
 - Autosaves the active draft and saved mocks in browser storage.
 - Saves mock snapshots and compares two or more mock teams.
@@ -33,6 +34,16 @@ No backend, MySQL, Node server, or account system is required.
 - Fixed the **Gone % display semantics**. While you are waiting for your turn, Gone now shows the chance a player disappears before your *upcoming* pick. Once you are on the clock, it switches to the chance he disappears before your *following* pick if you pass.
 - Recalibrated the ESPN-rank availability heuristic. The old curve was too wide for elite players and assigned impossible probability mass before pick 1. The new rank-centered curve is truncated at the start of the draft, is much tighter near the top, and widens gradually later.
 - Example: in a 12-team draft from slot 11 at pick 1.01, ESPN ranks 1 and 2 now show roughly **98% and 97%** chance of being gone before 1.11, rather than about 41%.
+
+
+## v2.2 ranking / recommendation separation
+
+- The Draft Board no longer discounts Gibbs, Bijan, or any other player just because they are unlikely to reach your draft slot. Its default order is **current model value only**.
+- Added an explicit **Value** column so you can see the model number driving the board order.
+- Before your turn, the recommendation cards become **Likely Targets at your upcoming pick**. This planning list intentionally blends two visible inputs: current model value and estimated availability. It does not change the board ranking.
+- Once you are on the clock, the cards switch back to **Best choices right now** and use the cross-position two-pick lookahead.
+- Fixed a lookahead inconsistency: before your turn, a possible second-pick player must now survive from the current board all the way to your following pick. The model no longer creates paths that implicitly let an elite player skip the picks before your first selection.
+- Existing browser saves remain compatible. If an older save had the board sorted by `Recommendation` or `Two-pick path`, v2.2 automatically falls back to `Model value`.
 
 ## Run locally
 
@@ -67,7 +78,7 @@ After extracting/overwriting the changed files:
 ```bash
 git status
 git add .
-git commit -m "Fix availability model and add board tooltips"
+git commit -m "Separate player value from target availability"
 git push
 ```
 
@@ -94,13 +105,15 @@ python tools/extract_players.py "Pre-Draft Strategy Data.pdf" data/players-2026.
 python tools/validate_players.py "Pre-Draft Strategy Data.pdf" data/players-2026.json
 ```
 
-## v2 valuation model
+## v2.2 valuation model
 
 - **VOLS:** projected points above the modeled last starter at the same position. Starter baselines include the league's FLEX demand.
 - **VORP:** projected points above a deeper replacement/waiver baseline after starters and seven bench spots per team are modeled.
 - **Roster value:** the model uses the larger of actual starter-lineup improvement and a small fraction of VORP for bench/depth value; it does not add full VOLS and VORP together.
 - **ESPN prior:** 35% of base decision value comes from ESPN rank translated onto the same structural-value scale. This is intended as a risk/role prior, not a requirement to follow ESPN order.
-- **Two-pick path:** candidate-now value plus the probability-weighted value of the best players likely to survive to your next selection, across all positions.
+- **Current value:** roster-aware player value if the player is available now. This drives the default Draft Board order and is not adjusted for availability.
+- **Likely-target score:** before your turn only, current value × estimated chance the player survives to your upcoming pick. This drives the planning cards, not the Draft Board.
+- **On-clock two-pick path:** candidate-now value plus the probability-weighted value of the best players likely to survive to your following selection, across all positions. It is used only when you are actually on the clock.
 - **Wait cost:** difference between the current player's model value and a same-position alternative around the following pick.
 - **Gone %:** directional conditional estimate based on ESPN rank. The rank is treated as the center of a truncated draft-position curve with tighter uncertainty for elite players and wider uncertainty later. While waiting for your turn it reports the chance the player is gone before your upcoming pick; on your turn it reports the chance he is gone before your following pick if you pass. It is not a true ADP probability because the source PDF has no ADP distribution.
 

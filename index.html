@@ -10,9 +10,9 @@
 <body>
   <header class="site-header">
     <div>
-      <p class="eyebrow">2026 • ESPN • Half PPR • v2.1</p>
+      <p class="eyebrow">2026 • ESPN • Half PPR • v2.2</p>
       <h1>Fantasy Draft Companion</h1>
-      <p class="subhead">Live draft board, starter advantage, replacement value, two-pick lookahead, and mock comparison.</p>
+      <p class="subhead">Live draft board, current player value, availability planning, on-clock two-pick lookahead, and mock comparison.</p>
     </div>
     <div class="header-actions">
       <button id="undoBtn" class="button secondary" type="button">Undo last pick</button>
@@ -73,10 +73,10 @@
       <section class="recommendation-section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Decision support</p>
-            <h2>Best choices right now</h2>
+            <p id="recommendationEyebrow" class="eyebrow">Decision support</p>
+            <h2 id="recommendationTitle">Best choices right now</h2>
           </div>
-          <p class="hint">Recommendation balances modeled starter advantage, a modest ESPN-rank prior, your roster, and a cross-position two-pick lookahead.</p>
+          <p id="recommendationHint" class="hint">On your turn, recommendations use a cross-position two-pick lookahead. Between turns, this area becomes a separate likely-targets list.</p>
         </div>
         <div id="recommendationCards" class="recommendation-grid"></div>
       </section>
@@ -108,13 +108,12 @@
             <label>
               Sort
               <select id="sortSelect">
-                <option value="recommendation">Recommendation</option>
+                <option value="value">Model value</option>
                 <option value="rank">ESPN rank</option>
                 <option value="projection">Projection</option>
                 <option value="vols">VOLS</option>
                 <option value="vorp">VORP</option>
                 <option value="vona">Wait cost</option>
-                <option value="path">Two-pick path</option>
               </select>
             </label>
           </div>
@@ -127,6 +126,7 @@
                   <th><span class="header-help" title="Player name, NFL team, and any injury-status badge captured from ESPN.">Player</span></th>
                   <th><abbr class="header-help" title="Fantasy position: QB, RB, WR, TE, D/ST, or K.">Pos</abbr></th>
                   <th class="num"><abbr class="header-help" title="Projected season fantasy points from the supplied ESPN pre-draft data.">Proj</abbr></th>
+                  <th class="num"><span class="header-help" title="Current model value if this player is available now. It blends roster-aware starter advantage with the modest ESPN-rank prior. Availability and two-pick lookahead do not change this number.">Value</span></th>
                   <th class="num"><abbr class="header-help" title="Value Over Last Starter: projected points above the modeled last starter at the same position. The starter pool includes league-specific FLEX demand.">VOLS</abbr></th>
                   <th class="num"><abbr class="header-help" title="Value Over Replacement Player: projected points above the deeper modeled waiver/replacement player after starters and benches are filled.">VORP</abbr></th>
                   <th class="num"><span class="header-help" title="Same-position wait cost: how much model value you give up if you pass now and use the likely same-position alternative around your following pick. Positive means waiting is costly.">Wait</span></th>
@@ -196,7 +196,7 @@
         <section class="panel">
           <h3>Player dataset</h3>
           <dl id="datasetInfo" class="definition-list"></dl>
-          <p class="footnote">The supplied PDF does not include ADP. ESPN overall rank is therefore used both for directional availability and as a modest value prior; the model is still allowed to disagree with ESPN.</p>
+          <p class="footnote">The supplied PDF does not include ADP. ESPN overall rank is therefore used for directional availability and as a modest value prior. Availability is displayed separately and no longer changes the Draft Board value order.</p>
         </section>
 
         <section class="panel">
@@ -220,13 +220,16 @@
         </section>
 
         <section class="panel">
-          <h3>V2.1 methodology</h3>
+          <h3>V2.2 methodology</h3>
           <ul class="method-list">
             <li><strong>VOLS:</strong> projected points above the modeled last starter at that position after league-wide FLEX demand is allocated.</li>
             <li><strong>VORP:</strong> projected points above the deeper waiver/replacement line after modeled benches are filled.</li>
             <li><strong>No double count:</strong> starter advantage and VORP are no longer simply added together; VORP mainly supplies a floor for bench/depth value.</li>
             <li><strong>ESPN prior:</strong> ESPN rank contributes 35% of base value in the same value scale, accounting for information that point projections alone may miss without forcing the model to copy ESPN.</li>
-            <li><strong>Two-pick lookahead:</strong> for every candidate, the model estimates the best value likely to survive to your following pick across all positions and scores the combined path.</li>
+            <li><strong>Current value:</strong> the Draft Board is ordered by player value if available now. It does not discount a player just because he is unlikely to reach your draft slot.</li>
+            <li><strong>Likely targets:</strong> before your turn, the cards above the board rank planning targets using current model value × estimated chance of reaching your upcoming pick. This is intentionally separate from the player ranking.</li>
+            <li><strong>On-clock two-pick lookahead:</strong> once it is actually your turn, recommendation cards compare the real available choices plus the expected value likely to survive to your following pick.</li>
+            <li><strong>Consistent lookahead:</strong> before your turn, second-pick candidates must survive from the current board all the way to your following pick; the model no longer assumes an elite player magically survives to your first pick and then reappears as the likely next selection.</li>
             <li><strong>Wait / Gone:</strong> wait cost uses the same-position alternative around your following pick. Gone % uses a rank-centered, truncated availability curve that is tighter for elite players and gradually wider later in the draft. Before your turn it means “gone by my upcoming pick”; on your turn it means “gone by my following pick if I pass.” It is still a heuristic because the source does not include ADP distributions.</li>
           </ul>
         </section>

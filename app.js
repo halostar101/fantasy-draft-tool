@@ -47,7 +47,7 @@
     savedMocks: [],
     activePosition: 'ALL',
     search: '',
-    sort: 'recommendation'
+    sort: 'value'
   };
 
   const $ = (id) => document.getElementById(id);
@@ -57,7 +57,8 @@
     undoBtn: $('undoBtn'), newDraftBtn: $('newDraftBtn'), saveSnapshotBtn: $('saveSnapshotBtn'),
     currentPickMetric: $('currentPickMetric'), turnMetric: $('turnMetric'), nextPickMetric: $('nextPickMetric'),
     picksAwayMetric: $('picksAwayMetric'), rosterCountMetric: $('rosterCountMetric'), rosterNeedMetric: $('rosterNeedMetric'),
-    progressMetric: $('progressMetric'), draftedMetric: $('draftedMetric'), recommendationCards: $('recommendationCards'),
+    progressMetric: $('progressMetric'), draftedMetric: $('draftedMetric'), recommendationEyebrow: $('recommendationEyebrow'),
+    recommendationTitle: $('recommendationTitle'), recommendationHint: $('recommendationHint'), recommendationCards: $('recommendationCards'),
     playerSearch: $('playerSearch'), positionFilters: $('positionFilters'), sortSelect: $('sortSelect'),
     playerTableBody: $('playerTableBody'), boardFootnote: $('boardFootnote'), rosterSlots: $('rosterSlots'),
     draftHistory: $('draftHistory'), dataStamp: $('dataStamp'), savedMocksList: $('savedMocksList'),
@@ -397,8 +398,17 @@
   function buildNextPickPool(availablePlayers, draft, context) {
     if (!context.followingPick || !context.decisionPick) return [];
     const model = leagueModels[draft.leagueId];
+
+    // If we are already on the clock, every currently available player has genuinely
+    // survived to the decision pick, so only model survival from this pick to the next.
+    // If we are still waiting for our turn, a player used in the second-pick lookahead
+    // must survive the *entire* path from the current board to our following pick. This
+    // prevents impossible planning paths such as "take Henry at 1.11, then Gibbs at 2.02"
+    // while ignoring the fact that Gibbs first had to survive picks 1-10.
+    const survivalFromPick = context.onClock ? context.decisionPick : context.current;
+
     return availablePlayers.filter(p => Number.isFinite(p.projectedPoints)).map(p => {
-      const survival = 1 - conditionalGoneProbability(p, context.decisionPick, context.followingPick);
+      const survival = 1 - conditionalGoneProbability(p, survivalFromPick, context.followingPick);
       const structural = Math.max(model.vols.get(p.id) || 0, MODEL.benchVorpWeight * Math.max(0, model.vorp.get(p.id) || 0));
       const prior = model.marketPrior.get(p.id) || 0;
       const preValue = ((1 - MODEL.marketPriorWeight) * structural + MODEL.marketPriorWeight * prior) * survival;
@@ -434,10 +444,9 @@
   }
 
   function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft, context = decisionContext(draft), nextPickPool = buildNextPickPool(availablePlayers, draft, context)) {
-    const model = leagueModels[draft.leagueId];
     const value = marginalRosterValue(player, rosterPlayers, draft);
     if (!Number.isFinite(value.decisionValue)) {
-      return { player, ...value, score:-Infinity, pathValue:null, waitCost:null, gone:0, beforeMyPick:0, alt:null, expectedNext:null, tier:null };
+      return { player, ...value, currentValue:-Infinity, onClockScore:-Infinity, targetScore:-Infinity, pathValue:null, waitCost:null, gone:0, beforeMyPick:0, alt:null, expectedNext:null, tier:null };
     }
 
     const alt = context.followingPick ? expectedAlternative(player, availablePlayers, context.followingPick) : null;
@@ -451,27 +460,38 @@
     const pathValue = value.decisionValue + expectedNext.expectedValue;
     const marketValue = context.decisionPick ? context.decisionPick - player.rank : 0;
 
-    // On your turn, score the two-pick path directly. Between your turns, modestly
-    // discount players unlikely to survive to your upcoming pick without hiding them.
-    const planningFactor = context.onClock ? 1 : (0.72 + 0.28 * (1 - beforeMyPick));
-    const score = pathValue * planningFactor;
+    // Keep three questions separate instead of hiding them in one blended score:
+    // 1) currentValue = how much we value the player if he is available right now.
+    // 2) targetScore = planning utility before our turn (value × chance he reaches us).
+    // 3) onClockScore = two-pick path value once the choice is real and availability is known.
+    const currentValue = value.decisionValue;
+    const targetAvailability = context.onClock ? 1 : (1 - beforeMyPick);
+    const targetScore = currentValue * targetAvailability;
+    const onClockScore = pathValue;
+
     return {
       player, ...value, alt, waitCost, vona:waitCost, gone, beforeMyPick, expectedNext,
-      pathValue, marketValue, score, targetPick:context.followingPick,
+      currentValue, targetScore, onClockScore, pathValue, marketValue, targetPick:context.followingPick,
       tier: tiers[player.position]?.get(player.id) || null
     };
   }
 
-  function recommendationReason(rec) {
+  function recommendationReason(rec, valueRank = null) {
     const pieces = [];
     const context = decisionContext();
+    if (!context.onClock) {
+      if (valueRank) pieces.push(`#${valueRank} on the current-value board`);
+      if (context.decisionPick) pieces.push(`${pct(1 - rec.beforeMyPick)} estimated chance to reach ${formatPick(context.decisionPick, configFor())}`);
+      if (Number.isFinite(rec.rawVols)) pieces.push(`${fmt(rec.rawVols)} pts over the last modeled ${rec.player.position} starter`);
+      return pieces.slice(0,3).join('; ') + '.';
+    }
+
     if (Number.isFinite(rec.starterGain) && rec.starterGain > 8) pieces.push(`adds ${fmt(rec.starterGain)} pts above the modeled starter baseline`);
     else if (Number.isFinite(rec.rawVols)) pieces.push(`${fmt(rec.rawVols)} pts over the last modeled ${rec.player.position} starter`);
     if (rec.expectedNext?.likelyPlayer && rec.targetPick) pieces.push(`two-pick lookahead most often pairs him with ${rec.expectedNext.likelyPlayer.name} around ${formatPick(rec.targetPick, configFor())}`);
     if (Number.isFinite(rec.waitCost) && rec.waitCost > 8 && rec.alt) pieces.push(`waiting at ${rec.player.position} costs about ${fmt(rec.waitCost)} model-value vs ${rec.alt.name}`);
-    else if (!context.onClock && rec.beforeMyPick >= .65 && context.decisionPick) pieces.push(`${pct(rec.beforeMyPick)} directional chance of going before your upcoming pick ${formatPick(context.decisionPick, configFor())}`);
-    else if (context.onClock && rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())} if you pass`);
-    if (!pieces.length) pieces.push('best current blend of starter advantage, ESPN rank prior, roster fit, and next-pick opportunity cost');
+    else if (rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())} if you pass`);
+    if (!pieces.length) pieces.push('best current blend of player value, roster fit, and next-pick opportunity cost');
     return pieces.slice(0,3).join('; ') + '.';
   }
 
@@ -537,7 +557,8 @@
     const roster = userRosterIds().map(id => playerMap.get(id)).filter(Boolean);
     const context = decisionContext(draft);
     const nextPickPool = buildNextPickPool(available, draft, context);
-    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool)).sort((a,b) => b.score - a.score || a.player.rank - b.player.rank);
+    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool))
+      .sort((a,b) => b.currentValue - a.currentValue || a.player.rank - b.player.rank);
     recommendationCache = { key, recs };
     return recs;
   }
@@ -550,28 +571,48 @@
       els.recommendationCards.innerHTML = '<div class="empty-state panel">Draft complete. Save this draft as a mock to compare it in Mock Lab.</div>';
       return;
     }
-    const recs = currentRecommendations().filter(r => Number.isFinite(r.score)).slice(0,3);
+
+    const all = currentRecommendations().filter(r => Number.isFinite(r.currentValue));
+    const valueRank = new Map(all.map((r,i) => [r.player.id, i + 1]));
+    let recs;
+    if (context.onClock) {
+      recs = all.slice().sort((a,b) => b.onClockScore - a.onClockScore || b.currentValue - a.currentValue || a.player.rank - b.player.rank).slice(0,3);
+      els.recommendationEyebrow.textContent = 'Decision support';
+      els.recommendationTitle.textContent = 'Best choices right now';
+      els.recommendationHint.textContent = 'You are on the clock. These cards compare actual available players using current model value plus the expected value of your following pick.';
+    } else {
+      recs = all.filter(r => (1 - r.beforeMyPick) > 0.02)
+        .sort((a,b) => b.targetScore - a.targetScore || b.currentValue - a.currentValue || a.player.rank - b.player.rank)
+        .slice(0,3);
+      els.recommendationEyebrow.textContent = 'Planning ahead';
+      els.recommendationTitle.textContent = context.decisionPick ? `Likely targets at ${formatPick(context.decisionPick, config)}` : 'Likely targets';
+      els.recommendationHint.textContent = 'This is a planning list, not a player ranking: target score is current model value × estimated chance the player reaches your upcoming pick. The Draft Board below stays ordered by player value.';
+    }
+
     els.recommendationCards.innerHTML = recs.map((r,i) => {
       const p = r.player;
+      const rank = valueRank.get(p.id);
       const displayedGone = context.onClock ? r.gone : r.beforeMyPick;
       const goneLabel = context.onClock ? 'Gone if wait' : 'Gone by my pick';
+      const badge = context.onClock ? `2-pick ${fmt(r.pathValue)}` : `Avail ${pct(1 - r.beforeMyPick)}`;
+      const label = context.onClock ? `#${i+1} recommendation` : `#${i+1} likely target`;
       return `<article class="rec-card">
         <div class="rec-rank">
           <div>
-            <div class="team-line">#${i+1} recommendation • ESPN ${p.rank}</div>
+            <div class="team-line">${label} • Model rank ${rank || '—'} • ESPN ${p.rank}</div>
             <h3>${escapeHtml(p.name)} ${p.injuryStatus ? `<span class="status-badge">${p.injuryStatus}</span>` : ''}</h3>
             <div class="team-line">${escapeHtml(p.team)} • <span class="pos-badge">${p.position}</span> • Tier ${r.tier || '—'}</div>
           </div>
-          <span class="score-badge">2-pick ${fmt(r.pathValue)}</span>
+          <span class="score-badge">${badge}</span>
         </div>
         <div class="rec-metrics">
           <div><span>Projection</span><strong>${fmt(p.projectedPoints)}</strong></div>
+          <div><span>Model value</span><strong>${fmt(r.currentValue)}</strong></div>
           <div><span>VOLS</span><strong>${fmt(r.rawVols)}</strong></div>
-          <div><span>VORP</span><strong>${fmt(r.rawVorp)}</strong></div>
           <div><span>${goneLabel}</span><strong>${pct(displayedGone)}</strong></div>
         </div>
-        <div class="path-line"><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>
-        <p class="rec-reason">${escapeHtml(recommendationReason(r))}</p>
+        ${context.onClock ? `<div class="path-line"><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>` : ''}
+        <p class="rec-reason">${escapeHtml(recommendationReason(r, rank))}</p>
         <button class="button draft-player" type="button" data-player-id="${p.id}">${teamAtPick(current, config) === state.currentDraft.draftSlot ? 'Draft to my team' : 'Mark drafted'}</button>
       </article>`;
     }).join('');
@@ -588,7 +629,7 @@
     if (q) recs = recs.filter(r => `${r.player.name} ${r.player.team} ${r.player.position}`.toLowerCase().includes(q));
 
     const sorters = {
-      recommendation: (a,b) => b.score - a.score || a.player.rank - b.player.rank,
+      value: (a,b) => b.currentValue - a.currentValue || a.player.rank - b.player.rank,
       rank: (a,b) => a.player.rank - b.player.rank,
       projection: (a,b) => safeNumber(b.player.projectedPoints,-Infinity) - safeNumber(a.player.projectedPoints,-Infinity) || a.player.rank-b.player.rank,
       vols: (a,b) => safeNumber(b.rawVols,-Infinity) - safeNumber(a.rawVols,-Infinity),
@@ -596,7 +637,7 @@
       vona: (a,b) => safeNumber(b.waitCost,-Infinity) - safeNumber(a.waitCost,-Infinity),
       path: (a,b) => safeNumber(b.pathValue,-Infinity) - safeNumber(a.pathValue,-Infinity)
     };
-    recs.sort(sorters[state.sort] || sorters.recommendation);
+    recs.sort(sorters[state.sort] || sorters.value);
 
     const isMine = current <= totalPicks(config) && teamAtPick(current,config) === state.currentDraft.draftSlot;
     els.playerTableBody.innerHTML = recs.map(r => {
@@ -609,6 +650,7 @@
         <td><div class="player-name">${escapeHtml(p.name)} ${p.injuryStatus ? `<span class="status-badge">${p.injuryStatus}</span>` : ''}</div><div class="player-meta">${escapeHtml(p.team)}</div></td>
         <td><span class="pos-badge">${p.position}</span></td>
         <td class="num">${fmt(p.projectedPoints)}</td>
+        <td class="num value-positive">${fmt(r.currentValue)}</td>
         <td class="num ${safeNumber(r.rawVols) >= 0 ? 'value-positive' : 'value-negative'}">${fmt(r.rawVols)}</td>
         <td class="num ${vClass}">${fmt(r.rawVorp)}</td>
         <td class="num">${fmt(r.waitCost)}</td>
@@ -621,7 +663,7 @@
     const goneMeaning = context.onClock
       ? `chance the player is drafted before your following pick ${formatPick(context.followingPick, config)} if you pass`
       : `chance the player is drafted before your upcoming pick ${formatPick(context.decisionPick, config)}`;
-    els.boardFootnote.textContent = `${recs.length} available shown. VOLS uses the modeled last starter; VORP uses the deeper waiver line. Recommendation uses a two-pick lookahead. “Gone” is the ${goneMeaning}; it is a heuristic based on ESPN rank because the PDF does not include ADP.`;
+    els.boardFootnote.textContent = `${recs.length} available shown. The default Draft Board order is current model value only; availability does not change that order. VOLS uses the modeled last starter and VORP uses the deeper waiver line. “Gone” is the ${goneMeaning}; it is a heuristic based on ESPN rank because the PDF does not include ADP. Two-pick lookahead is used only for the on-clock recommendation cards above.`;
   }
 
   function renderRoster() {
@@ -954,7 +996,7 @@
       if (current?.leagueId && Array.isArray(current.picks)) state.currentDraft = current;
       if (Array.isArray(mocks)) state.savedMocks = mocks;
       if (prefs.activePosition) state.activePosition = prefs.activePosition;
-      if (prefs.sort) state.sort = prefs.sort;
+      if (prefs.sort) state.sort = prefs.sort === 'recommendation' || prefs.sort === 'path' ? 'value' : prefs.sort;
     } catch (err) {
       console.warn('Could not load local state', err);
     }
