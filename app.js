@@ -32,7 +32,11 @@
   const MODEL = {
     marketPriorWeight: 0.35,
     benchVorpWeight: 0.22,
-    lookaheadCandidateLimit: 48
+    lookaheadCandidateLimit: 48,
+    simulationCandidateLimit: 10,
+    simulationExtraPerPosition: 1,
+    simulationsPerCandidate: 64,
+    simulatedUserCandidateLimit: 36
   };
 
   let dataset = null;
@@ -41,6 +45,7 @@
   let leagueModels = {};
   let tiers = {};
   let recommendationCache = { key: null, recs: [] };
+  let simulationCache = { key: null, results: new Map() };
 
   const state = {
     currentDraft: null,
@@ -443,6 +448,183 @@
     return { expectedValue, likelyPlayer, likelyProbability };
   }
 
+
+  function hashString(text) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < text.length; i += 1) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function futureUserPicks(currentPick, draft = state.currentDraft, count = 3) {
+    const picks = [];
+    let cursor = currentPick + 1;
+    while (picks.length < count) {
+      const next = nextUserPick(cursor, draft);
+      if (!next) break;
+      picks.push(next);
+      cursor = next + 1;
+    }
+    return picks;
+  }
+
+  function sampleOpponentPick(pool, overallPick, rng) {
+    if (!pool.length) return null;
+    const candidateCount = Math.min(28, pool.length);
+    const candidates = pool.slice(0, candidateCount);
+    const bestRank = candidates[0].rank;
+    const temperature = Math.max(3.5, Math.min(14, 3.5 + overallPick * 0.08));
+    let total = 0;
+    const weights = candidates.map(p => {
+      const delta = Math.max(0, p.rank - bestRank);
+      const w = Math.exp(-delta / temperature);
+      total += w;
+      return w;
+    });
+    let roll = rng() * total;
+    let chosenIndex = 0;
+    for (let i = 0; i < weights.length; i += 1) {
+      roll -= weights[i];
+      if (roll <= 0) { chosenIndex = i; break; }
+    }
+    return pool.splice(chosenIndex, 1)[0];
+  }
+
+  function chooseSimulatedUserPick(pool, roster, draft) {
+    if (!pool.length) return null;
+    const candidates = pool.slice(0, Math.min(MODEL.simulatedUserCandidateLimit, pool.length));
+    let best = null;
+    for (const p of candidates) {
+      const value = marginalRosterValue(p, roster, draft);
+      if (!Number.isFinite(value.decisionValue)) continue;
+      const score = value.decisionValue;
+      if (!best || score > best.score || (score === best.score && p.rank < best.player.rank)) best = { player:p, score };
+    }
+    return best?.player || candidates[0] || null;
+  }
+
+  function offensiveStarterProjection(roster, draft = state.currentDraft) {
+    const config = configFor(draft);
+    const allocated = allocateRoster(roster, config).filter(x => !x.slot.startsWith('BN') && x.slot !== 'D/ST' && x.slot !== 'K');
+    let total = 0;
+    let filled = 0;
+    for (const slotRow of allocated) {
+      if (!slotRow.player) continue;
+      total += safeNumber(slotRow.player.projectedPoints, 0);
+      filled += 1;
+    }
+    return { total, filled, starterSlots: allocated.length };
+  }
+
+  function buildSimulationCandidates(allRecs) {
+    const selected = [];
+    const seen = new Set();
+    const add = r => {
+      if (!r || seen.has(r.player.id)) return;
+      seen.add(r.player.id);
+      selected.push(r);
+    };
+    allRecs.slice(0, MODEL.simulationCandidateLimit).forEach(add);
+    ['QB','RB','WR','TE'].forEach(pos => allRecs.filter(r => r.player.position === pos).slice(0, MODEL.simulationExtraPerPosition).forEach(add));
+    return selected;
+  }
+
+  function simulateFourPickOutlook(firstRec, allAvailable, rosterPlayers, draft = state.currentDraft) {
+    const current = currentOverallPick(draft);
+    const futurePicks = futureUserPicks(current, draft, 3);
+    const userPicks = [current, ...futurePicks];
+    const lastUserPick = userPicks[userPicks.length - 1];
+    const simCount = futurePicks.length ? MODEL.simulationsPerCandidate : 1;
+    const scores = [];
+    let filledTotal = 0;
+    const pathPairs = new Map();
+
+    for (let sim = 0; sim < simCount; sim += 1) {
+      const rng = mulberry32(hashString(`${draft.id}|${draft.updatedAt}|${sim}`));
+      const pool = allAvailable.filter(p => p.id !== firstRec.player.id).slice().sort((a,b) => a.rank - b.rank);
+      const roster = rosterPlayers.concat(firstRec.player);
+      const pathPlayers = [firstRec.player.name];
+      const pathPositions = [firstRec.player.position];
+
+      for (let pick = current + 1; pick <= lastUserPick; pick += 1) {
+        if (teamAtPick(pick, configFor(draft)) === draft.draftSlot) {
+          const chosen = chooseSimulatedUserPick(pool, roster, draft);
+          if (chosen) {
+            const idx = pool.findIndex(p => p.id === chosen.id);
+            if (idx >= 0) pool.splice(idx, 1);
+            roster.push(chosen);
+            pathPlayers.push(chosen.name);
+            pathPositions.push(chosen.position);
+          }
+        } else {
+          sampleOpponentPick(pool, pick, rng);
+        }
+      }
+
+      const horizon = offensiveStarterProjection(roster, draft);
+      scores.push(horizon.total);
+      filledTotal += horizon.filled;
+      const pairKey = JSON.stringify([pathPositions.join(' → '), pathPlayers.join(' → ')]);
+      pathPairs.set(pairKey, (pathPairs.get(pairKey) || 0) + 1);
+    }
+
+    scores.sort((a,b) => a-b);
+    const avg = scores.reduce((sum,x) => sum+x, 0) / Math.max(1, scores.length);
+    const p25 = scores[Math.floor((scores.length - 1) * 0.25)] || avg;
+    const p75 = scores[Math.floor((scores.length - 1) * 0.75)] || avg;
+    const commonPairKey = Array.from(pathPairs.entries()).sort((a,b) => b[1] - a[1])[0]?.[0];
+    const commonPair = commonPairKey ? JSON.parse(commonPairKey) : ['', ''];
+    return {
+      avgStarterProjection: avg,
+      p25,
+      p75,
+      avgFilledStarters: filledTotal / Math.max(1, scores.length),
+      positionPath: commonPair[0],
+      playerPath: commonPair[1],
+      simulations: simCount,
+      picksPlanned: userPicks.length,
+      lastUserPick
+    };
+  }
+
+  function simulationResults(allRecs, draft = state.currentDraft) {
+    const key = `${draft.id}|${draft.updatedAt}|${draft.leagueId}|${draft.draftSlot}|${draft.picks.length}|sim-v1`;
+    if (simulationCache.key === key) return simulationCache.results;
+    const results = new Map();
+    const context = decisionContext(draft);
+    if (!context.onClock) {
+      simulationCache = { key, results };
+      return results;
+    }
+    const currentRoster = userRosterIds(draft).map(id => playerMap.get(id)).filter(Boolean);
+    const offensive = offensiveStarterProjection(currentRoster, draft);
+    if (offensive.filled >= offensive.starterSlots) {
+      simulationCache = { key, results };
+      return results;
+    }
+    const drafted = draftedSet(draft);
+    const available = players.filter(p => !drafted.has(p.id)).sort((a,b) => a.rank - b.rank);
+    const roster = currentRoster;
+    for (const rec of buildSimulationCandidates(allRecs)) {
+      results.set(rec.player.id, simulateFourPickOutlook(rec, available, roster, draft));
+    }
+    simulationCache = { key, results };
+    return results;
+  }
+
   function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft, context = decisionContext(draft), nextPickPool = buildNextPickPool(availablePlayers, draft, context)) {
     const value = marginalRosterValue(player, rosterPlayers, draft);
     if (!Number.isFinite(value.decisionValue)) {
@@ -476,7 +658,7 @@
     };
   }
 
-  function recommendationReason(rec, valueRank = null) {
+  function recommendationReason(rec, valueRank = null, simulation = null, immediateRank = null) {
     const pieces = [];
     const context = decisionContext();
     if (!context.onClock) {
@@ -486,12 +668,14 @@
       return pieces.slice(0,3).join('; ') + '.';
     }
 
-    if (Number.isFinite(rec.starterGain) && rec.starterGain > 8) pieces.push(`adds ${fmt(rec.starterGain)} pts above the modeled starter baseline`);
+    if (immediateRank) pieces.push(`#${immediateRank} on the immediate two-pick view`);
+    if (simulation) pieces.push(`${simulation.simulations} rank-driven paths average ${fmt(simulation.avgStarterProjection,0)} projected starter pts through ${formatPick(simulation.lastUserPick, configFor())}`);
+    if (Number.isFinite(rec.starterGain) && rec.starterGain > 8) pieces.push(`adds ${fmt(rec.starterGain)} pts above the modeled starter baseline now`);
     else if (Number.isFinite(rec.rawVols)) pieces.push(`${fmt(rec.rawVols)} pts over the last modeled ${rec.player.position} starter`);
-    if (rec.expectedNext?.likelyPlayer && rec.targetPick) pieces.push(`two-pick lookahead most often pairs him with ${rec.expectedNext.likelyPlayer.name} around ${formatPick(rec.targetPick, configFor())}`);
+    if (!simulation && rec.expectedNext?.likelyPlayer && rec.targetPick) pieces.push(`two-pick lookahead most often pairs him with ${rec.expectedNext.likelyPlayer.name} around ${formatPick(rec.targetPick, configFor())}`);
     if (Number.isFinite(rec.waitCost) && rec.waitCost > 8 && rec.alt) pieces.push(`waiting at ${rec.player.position} costs about ${fmt(rec.waitCost)} model-value vs ${rec.alt.name}`);
     else if (rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())} if you pass`);
-    if (!pieces.length) pieces.push('best current blend of player value, roster fit, and next-pick opportunity cost');
+    if (!pieces.length) pieces.push('strong current player value with a favorable multi-pick roster path');
     return pieces.slice(0,3).join('; ') + '.';
   }
 
@@ -575,11 +759,23 @@
     const all = currentRecommendations().filter(r => Number.isFinite(r.currentValue));
     const valueRank = new Map(all.map((r,i) => [r.player.id, i + 1]));
     let recs;
+    let simulations = new Map();
+    let immediateRank = new Map();
     if (context.onClock) {
-      recs = all.slice().sort((a,b) => b.onClockScore - a.onClockScore || b.currentValue - a.currentValue || a.player.rank - b.player.rank).slice(0,3);
+      const immediate = all.slice().sort((a,b) => b.onClockScore - a.onClockScore || b.currentValue - a.currentValue || a.player.rank - b.player.rank);
+      immediateRank = new Map(immediate.map((r,i) => [r.player.id, i + 1]));
+      simulations = simulationResults(all);
+      if (simulations.size) {
+        recs = all.filter(r => simulations.has(r.player.id))
+          .sort((a,b) => simulations.get(b.player.id).avgStarterProjection - simulations.get(a.player.id).avgStarterProjection || b.onClockScore - a.onClockScore || a.player.rank - b.player.rank)
+          .slice(0,3);
+        els.recommendationHint.textContent = 'Cards are ranked by a Monte Carlo outlook across this pick plus your next three selections, using projected points actually occupying offensive starting slots by the end of that horizon. The immediate two-pick view remains visible separately.';
+      } else {
+        recs = immediate.slice(0,3);
+        els.recommendationHint.textContent = 'Your offensive starting slots are filled, so the longer-horizon roster-construction simulation steps aside and the cards use the immediate two-pick view for depth and late-round decisions.';
+      }
       els.recommendationEyebrow.textContent = 'Decision support';
       els.recommendationTitle.textContent = 'Best choices right now';
-      els.recommendationHint.textContent = 'You are on the clock. These cards compare actual available players using current model value plus the expected value of your following pick.';
     } else {
       recs = all.filter(r => (1 - r.beforeMyPick) > 0.02)
         .sort((a,b) => b.targetScore - a.targetScore || b.currentValue - a.currentValue || a.player.rank - b.player.rank)
@@ -592,14 +788,15 @@
     els.recommendationCards.innerHTML = recs.map((r,i) => {
       const p = r.player;
       const rank = valueRank.get(p.id);
+      const sim = simulations.get(p.id) || null;
       const displayedGone = context.onClock ? r.gone : r.beforeMyPick;
       const goneLabel = context.onClock ? 'Gone if wait' : 'Gone by my pick';
-      const badge = context.onClock ? `2-pick ${fmt(r.pathValue)}` : `Avail ${pct(1 - r.beforeMyPick)}`;
-      const label = context.onClock ? `#${i+1} recommendation` : `#${i+1} likely target`;
+      const badge = context.onClock && sim ? `${sim.picksPlanned}-pick ${fmt(sim.avgStarterProjection,0)}` : (context.onClock ? `2-pick ${fmt(r.pathValue)}` : `Avail ${pct(1 - r.beforeMyPick)}`);
+      const label = context.onClock ? `#${i+1} ${sim?.picksPlanned || 2}-pick outlook` : `#${i+1} likely target`;
       return `<article class="rec-card">
         <div class="rec-rank">
           <div>
-            <div class="team-line">${label} • Model rank ${rank || '—'} • ESPN ${p.rank}</div>
+            <div class="team-line">${label}${context.onClock ? ` • Immediate #${immediateRank.get(p.id) || '—'}` : ''} • Model rank ${rank || '—'} • ESPN ${p.rank}</div>
             <h3>${escapeHtml(p.name)} ${p.injuryStatus ? `<span class="status-badge">${p.injuryStatus}</span>` : ''}</h3>
             <div class="team-line">${escapeHtml(p.team)} • <span class="pos-badge">${p.position}</span> • Tier ${r.tier || '—'}</div>
           </div>
@@ -611,8 +808,10 @@
           <div><span>VOLS</span><strong>${fmt(r.rawVols)}</strong></div>
           <div><span>${goneLabel}</span><strong>${pct(displayedGone)}</strong></div>
         </div>
-        ${context.onClock ? `<div class="path-line"><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>` : ''}
-        <p class="rec-reason">${escapeHtml(recommendationReason(r, rank))}</p>
+        ${context.onClock ? `<div class="path-line"><span>Immediate 2-pick:</span><strong>${fmt(r.pathValue)}</strong><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>` : ''}
+        ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common ${sim.picksPlanned}-pick shape:</span><strong>${escapeHtml(sim.positionPath || '—')}</strong><span>Middle 50%:</span><strong>${fmt(sim.p25,0)}–${fmt(sim.p75,0)} starter pts</strong></div>` : ''}
+        ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common player path:</span><strong>${escapeHtml(sim.playerPath || '—')}</strong></div>` : ''}
+        <p class="rec-reason">${escapeHtml(recommendationReason(r, rank, sim, immediateRank.get(p.id)))}</p>
         <button class="button draft-player" type="button" data-player-id="${p.id}">${teamAtPick(current, config) === state.currentDraft.draftSlot ? 'Draft to my team' : 'Mark drafted'}</button>
       </article>`;
     }).join('');
