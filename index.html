@@ -220,7 +220,7 @@
         </section>
 
         <section class="panel">
-          <h3>V2.5 methodology</h3>
+          <h3>V2.5.2 methodology</h3>
           <ul class="method-list">
             <li><strong>VOLS:</strong> projected points above the modeled last starter at that position after league-wide FLEX demand is allocated.</li>
             <li><strong>VORP:</strong> projected points above the deeper waiver/replacement line after modeled benches are filled.</li>
@@ -229,7 +229,7 @@
             <li><strong>Current value:</strong> the Draft Board is ordered by player value if available now. It does not discount a player just because he is unlikely to reach your draft slot.</li>
             <li><strong>Priority targets:</strong> before your turn, the cards above the board combine current model value, estimated chance of reaching your upcoming pick, roster relevance, and multi-turn positional urgency. This is intentionally separate from the player ranking.</li>
             <li><strong>On-clock two-pick lookahead:</strong> once it is actually your turn, recommendation cards compare the real available choices plus the expected value likely to survive to your following pick. The second-pick helper now obeys the same roster rules as the longer simulation, so it will not suggest K/DST while offensive starters remain open or direct-to-bench RB/WR picks while core skill slots are incomplete.</li>
-            <li><strong>Average four-pick Monte Carlo:</strong> the primary on-clock cards average 64 rank-driven paths across this pick plus your next three selections. “Common player path” is only the most frequent exact path, so it can differ from the average score shown on the badge.</li>
+            <li><strong>Average four-pick Monte Carlo:</strong> the primary on-clock cards average 256 deterministic rank-driven paths across this pick plus your next three selections. “Common player path” is only the most frequent exact path, so it can differ from the average score shown on the badge. Candidates within 0.5% of the best average are labeled essentially tied rather than presenting tiny simulation gaps as meaningful rankings.</li>
             <li><strong>Multi-turn positional depth:</strong> the tool also forecasts the best same-position projection likely to remain across your next four turns. Flat tiers reduce urgency even when the four-pick horizon ends sooner; this is designed to recognize situations such as waiting on a deep TE or QB tier.</li>
             <li><strong>Deferred QB/TE value:</strong> if QB or TE remains open at the Monte Carlo horizon, the terminal score estimates the production likely to remain at your next turn rather than assuming the slot is zero or forcing it to be filled immediately. Useful RB/WR bench depth receives a small residual VORP credit only after core RB/WR/FLEX starting capacity is filled.</li>
             <li><strong>K/DST reliability:</strong> raw ESPN projection, VOLS, and VORP stay untouched, but Model Value applies a heuristic reliability discount (30% D/ST, 40% K) because preseason separation at those positions is less dependable and the positions are easier to replace/stream. Decision Support still defers them while offensive starters are incomplete.</li>

@@ -35,7 +35,8 @@
     lookaheadCandidateLimit: 48,
     simulationCandidateLimit: 10,
     simulationExtraPerPosition: 1,
-    simulationsPerCandidate: 64,
+    simulationsPerCandidate: 256,
+    simulationTiePct: 0.005,
     simulatedUserCandidateLimit: 36,
     singletonDeferredCredit: 0.88,
     deferredFuturePickDiscount: 0.97,
@@ -537,6 +538,12 @@
   }
 
 
+  function draftStateFingerprint(draft = state.currentDraft) {
+    if (!draft) return 'no-draft';
+    const picks = (draft.picks || []).map(p => `${p.pick}:${p.playerId}:${p.teamNumber || ''}`).join(',');
+    return `${draft.leagueId}|slot-${draft.draftSlot}|${picks}`;
+  }
+
   function hashString(text) {
     let h = 2166136261 >>> 0;
     for (let i = 0; i < text.length; i += 1) {
@@ -754,7 +761,7 @@
     const pathPairs = new Map();
 
     for (let sim = 0; sim < simCount; sim += 1) {
-      const rng = mulberry32(hashString(`${draft.id}|${draft.updatedAt}|${sim}`));
+      const rng = mulberry32(hashString(`${draftStateFingerprint(draft)}|scenario-${sim}`));
       const pool = allAvailable.filter(p => p.id !== firstRec.player.id).slice().sort((a,b) => a.rank - b.rank);
       const roster = rosterPlayers.concat(firstRec.player);
       const pathPlayers = [firstRec.player.name];
@@ -802,7 +809,7 @@
   }
 
   function simulationResults(allRecs, draft = state.currentDraft) {
-    const key = `${draft.id}|${draft.updatedAt}|${draft.leagueId}|${draft.draftSlot}|${draft.picks.length}|sim-v3`;
+    const key = `${draftStateFingerprint(draft)}|sim-v5`;
     if (simulationCache.key === key) return simulationCache.results;
     const results = new Map();
     const context = decisionContext(draft);
@@ -943,7 +950,7 @@
 
   function currentRecommendations() {
     const draft = state.currentDraft;
-    const key = `${draft.id}|${draft.updatedAt}|${draft.leagueId}|${draft.draftSlot}|${draft.picks.length}`;
+    const key = draftStateFingerprint(draft);
     if (recommendationCache.key === key) return recommendationCache.recs;
     const drafted = draftedSet();
     const available = players.filter(p => !drafted.has(p.id));
@@ -971,16 +978,24 @@
     let recs;
     let simulations = new Map();
     let immediateRank = new Map();
+    let simulationTopAvg = null;
+    let simulationTieTolerance = 0;
+    let simulationTieCount = 0;
     if (context.onClock) {
       const eligibleNow = all.filter(r => rosterRelevant(r.player, userRosterIds().map(id => playerMap.get(id)).filter(Boolean), state.currentDraft, context, r.urgency));
       const immediate = eligibleNow.slice().sort((a,b) => b.onClockScore - a.onClockScore || b.currentValue - a.currentValue || a.player.rank - b.player.rank);
       immediateRank = new Map(immediate.map((r,i) => [r.player.id, i + 1]));
       simulations = simulationResults(all);
       if (simulations.size) {
-        recs = eligibleNow.filter(r => simulations.has(r.player.id))
-          .sort((a,b) => simulations.get(b.player.id).avgHorizonScore - simulations.get(a.player.id).avgHorizonScore || b.onClockScore - a.onClockScore || a.player.rank - b.player.rank)
-          .slice(0,3);
-        els.recommendationHint.textContent = 'Cards are ranked by the average Monte Carlo outlook across this pick plus your next three selections. Future picks avoid direct-to-bench RB/WR choices while core RB/WR/FLEX capacity is open, and a separate multi-turn position-depth forecast lets the model recognize flat QB/TE tiers that can safely be deferred beyond the four-pick horizon. The immediate two-pick view remains visible separately and now follows the same roster rules.';
+        const simulatedEligible = eligibleNow.filter(r => simulations.has(r.player.id))
+          .sort((a,b) => simulations.get(b.player.id).avgHorizonScore - simulations.get(a.player.id).avgHorizonScore || b.onClockScore - a.onClockScore || a.player.rank - b.player.rank);
+        simulationTopAvg = simulations.get(simulatedEligible[0]?.player.id)?.avgHorizonScore ?? null;
+        simulationTieTolerance = Number.isFinite(simulationTopAvg) ? Math.max(1, Math.abs(simulationTopAvg) * MODEL.simulationTiePct) : 0;
+        simulationTieCount = Number.isFinite(simulationTopAvg)
+          ? simulatedEligible.filter(r => Math.abs(simulationTopAvg - simulations.get(r.player.id).avgHorizonScore) <= simulationTieTolerance).length
+          : 0;
+        recs = simulatedEligible.slice(0,3);
+        els.recommendationHint.textContent = 'Cards are ranked by the average of 256 deterministic Monte Carlo paths across this pick plus your next three selections. Candidates within 0.5% of the best average are labeled essentially tied so tiny sampling differences are not treated as meaningful. Future picks avoid direct-to-bench RB/WR choices while core RB/WR/FLEX capacity is open, and the separate multi-turn position-depth forecast recognizes flat QB/TE tiers that can safely be deferred beyond the four-pick horizon. The immediate two-pick view remains visible separately and follows the same roster rules.';
       } else {
         recs = immediate.slice(0,3);
         els.recommendationHint.textContent = 'Your offensive starting slots are filled, so the longer-horizon roster-construction simulation steps aside and the cards use the immediate two-pick view for depth and late-round decisions.';
@@ -1004,7 +1019,13 @@
       const displayedGone = context.onClock ? r.gone : r.beforeMyPick;
       const goneLabel = context.onClock ? 'Gone if wait' : 'Gone by my pick';
       const badge = context.onClock && sim ? `Avg ${sim.picksPlanned}-pick ${fmt(sim.avgHorizonScore,0)}` : (context.onClock ? `2-pick ${fmt(r.pathValue)}` : `Avail ${pct(1 - r.beforeMyPick)}`);
-      const label = context.onClock ? `#${i+1} ${sim ? `avg ${sim.picksPlanned}-pick outlook` : '2-pick outlook'}` : `#${i+1} priority target`;
+      const isSimulationTie = Boolean(context.onClock && sim && Number.isFinite(simulationTopAvg) && Math.abs(simulationTopAvg - sim.avgHorizonScore) <= simulationTieTolerance && simulationTieCount > 1);
+      const label = context.onClock
+        ? (sim ? `${isSimulationTie ? 'Top group' : `#${i+1}`} • avg ${sim.picksPlanned}-pick outlook` : `#${i+1} 2-pick outlook`)
+        : `#${i+1} priority target`;
+      const tieMessage = isSimulationTie
+        ? `Essentially tied with the top ${sim.picksPlanned}-pick outlook (within ${(MODEL.simulationTiePct * 100).toFixed(1)}%). Treat the ordering inside this group as a preference/tier decision.`
+        : '';
       return `<article class="rec-card">
         <div class="rec-rank">
           <div>
@@ -1025,6 +1046,7 @@
         ${r.scarcity?.forecasts?.length ? `<div class="path-line"><span>Position depth:</span><strong>${r.scarcity.safeTurns ? `safe ~${r.scarcity.safeTurns} turn${r.scarcity.safeTurns === 1 ? '' : 's'}` : 'cliff near'}</strong><span>Proj if waiting:</span><strong>${r.scarcity.forecasts.map(f => fmt(f.expectedProjection,0)).join(' → ')}</strong></div>` : ''}
         ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common ${sim.picksPlanned}-pick shape:</span><strong>${escapeHtml(sim.positionPath || '—')}</strong><span>Middle 50%:</span><strong>${fmt(sim.p25,0)}–${fmt(sim.p75,0)} horizon pts</strong><span>Avg starters filled:</span><strong>${fmt(sim.avgFilledStarters,1)}/${config.rosterSlots.filter(slot => !['D/ST','K'].includes(slot)).length}</strong></div>` : ''}
         ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common player path:</span><strong>${escapeHtml(sim.playerPath || '—')}</strong></div>` : ''}
+        ${tieMessage ? `<div class="path-line"><span>Model call:</span><strong>${escapeHtml(tieMessage)}</strong></div>` : ''}
         <p class="rec-reason">${escapeHtml(recommendationReason(r, rank, sim, immediateRank.get(p.id)))}</p>
         <button class="button draft-player" type="button" data-player-id="${p.id}">${teamAtPick(current, config) === state.currentDraft.draftSlot ? 'Draft to my team' : 'Mark drafted'}</button>
       </article>`;

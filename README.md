@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.5
+# Fantasy Draft Companion (2026) — v2.5.2
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -39,6 +39,21 @@ No backend, MySQL, Node server, or account system is required.
 
 
 
+
+## v2.5.2 simulation stability + tie handling
+
+- Increased the automatic Monte Carlo sample from **64 to 256 deterministic paths per serious on-clock candidate**. This cuts sampling noise roughly in half while remaining lightweight enough for a browser-only draft tool.
+- Added explicit **essentially tied** handling. Any candidate whose average four-pick outlook is within **0.5% of the best simulated average** is shown as part of the top group rather than implying that a tiny point difference is strategically meaningful.
+- The displayed card still shows the exact average and common path, but a tie callout tells you to use player preference, risk tolerance, or tier judgment as the tiebreaker.
+- Simulation scenarios remain reproducible: identical league, slot, and pick history generate the same 256 paths and the same results after an undo returns you to the same board.
+
+## v2.5.1 deterministic simulation patch
+
+- Fixed a Monte Carlo reproducibility bug. Simulation seeds previously included the draft `updatedAt` timestamp, so selecting a player and then undoing the pick returned to the same board but generated a different set of random scenarios.
+- Simulations are now seeded from a stable fingerprint of the actual draft state: league, draft slot, and exact pick history. Returning to the same board state now returns the same scenario set, recommendation ordering, average four-pick score, range, and common path.
+- The recommendation/simulation caches use the same state fingerprint, so timestamp-only changes no longer force logically identical boards to behave differently.
+- Monte Carlo outcomes can still change when the board itself changes, which is intentional. Very small score gaps should still be treated as ties rather than false precision.
+
 ## v2.5 depth-forecast + consistency update
 
 - The immediate **two-pick** helper now obeys the same roster-construction rules as the Monte Carlo engine. It will not pair a current choice with D/ST or K while offensive starters remain open, and it will not choose an RB/WR that goes directly to the bench while core RB/WR/FLEX capacity is incomplete.
@@ -61,7 +76,7 @@ No backend, MySQL, Node server, or account system is required.
 ## v2.3 four-pick Monte Carlo outlook
 
 - The browser runs the simulations automatically. You do **not** run hundreds of mock drafts yourself.
-- For each serious on-clock candidate, v2.3 runs 64 deterministic, rank-driven draft paths; across the candidate set this means hundreds of plausible paths are evaluated automatically after each pick.
+- The original v2.3 implementation used 64 deterministic, rank-driven paths per serious on-clock candidate. v2.5.2 raises the live default to 256 per candidate for lower sampling noise; across the candidate set this means thousands of plausible paths can be evaluated automatically after each pick.
 - Opponent selections are sampled from the best remaining ESPN-ranked players with a tighter distribution early and more variance later. This is a directional draft-room model, not a claim of calibrated ADP probabilities.
 - After every simulated opponent run, the tool makes your future selections using the same roster-aware value engine. Positional scarcity emerges as the simulated board depletes and roster slots fill rather than through a separate forced position bonus.
 - Each candidate is evaluated across your current selection plus up to the next three selections (for example, 3.11 → 4.02 → 5.11 → 6.02).
@@ -111,7 +126,7 @@ After extracting/overwriting the changed files:
 ```bash
 git status
 git add .
-git commit -m "Refine roster paths and urgency"
+git commit -m "Increase Monte Carlo samples and flag ties"
 git push
 ```
 
