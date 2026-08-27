@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  const APP_VERSION = '2.5.5';
+
   const STORAGE = {
     current: 'fantasy-draft-tool:v1:currentDraft',
     mocks: 'fantasy-draft-tool:v1:savedMocks',
@@ -90,6 +92,23 @@
     return JSON.parse(JSON.stringify(obj));
   }
 
+  function recordModelVersion(draft) {
+    if (!draft) return;
+    if (!draft.modelVersion) draft.modelVersion = APP_VERSION;
+    const versions = Array.isArray(draft.modelVersionsUsed) ? draft.modelVersionsUsed.slice() : [draft.modelVersion];
+    if (!versions.includes(APP_VERSION)) versions.push(APP_VERSION);
+    draft.modelVersionsUsed = versions.filter(Boolean);
+  }
+
+  function modelVersionLabel(draft) {
+    const versions = Array.isArray(draft?.modelVersionsUsed) && draft.modelVersionsUsed.length
+      ? draft.modelVersionsUsed
+      : (draft?.modelVersion ? [draft.modelVersion] : []);
+    if (!versions.length) return 'model unknown';
+    if (versions.length === 1) return `model v${versions[0]}`;
+    return `models ${versions.map(v => `v${v}`).join(' → ')}`;
+  }
+
   function configFor(draft = state.currentDraft) {
     return LEAGUES[draft?.leagueId || '12'];
   }
@@ -111,6 +130,8 @@
       draftSlot: clampInt(draftSlot, 1, config.teams, 1),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      modelVersion: APP_VERSION,
+      modelVersionsUsed: [APP_VERSION],
       picks: []
     };
   }
@@ -1280,6 +1301,7 @@
     if (current > totalPicks(config)) return;
     if (draftedSet(draft).has(playerId)) return;
     const owner = teamAtPick(current, config);
+    recordModelVersion(draft);
     draft.picks.push({ pick: current, playerId, teamNumber: owner, isMine: owner === draft.draftSlot });
     draft.updatedAt = new Date().toISOString();
     persist();
@@ -1304,6 +1326,7 @@
   }
 
   function saveSnapshot() {
+    recordModelVersion(state.currentDraft);
     const draft = deepClone(state.currentDraft);
     const config = configFor(draft);
     draft.id = uid('mock');
@@ -1328,7 +1351,7 @@
       return `<article class="mock-item">
         <div class="mock-item-head">
           <input class="mock-compare-check" type="checkbox" value="${mock.id}" aria-label="Compare ${escapeHtml(mock.name)}" ${checkedIds.has(mock.id) ? 'checked' : ''}>
-          <div><h3>${escapeHtml(mock.name)}</h3><div class="mock-meta">${config.name} • slot ${mock.draftSlot} • ${mine}/${rosterSize(config)} rostered • ${mock.picks.length} total picks</div></div>
+          <div><h3>${escapeHtml(mock.name)}</h3><div class="mock-meta">${config.name} • slot ${mock.draftSlot} • ${mine}/${rosterSize(config)} rostered • ${mock.picks.length} total picks • ${modelVersionLabel(mock)}</div></div>
           <span class="pos-badge">${mock.picks.length >= totalPicks(config) ? 'Complete' : 'Partial'}</span>
         </div>
         <div class="mock-actions">
@@ -1452,7 +1475,7 @@
   }
 
   function exportBackup() {
-    const backup = { version:1, updatedAt:new Date().toISOString(), savedMocks:state.savedMocks, currentDraft:state.currentDraft };
+    const backup = { version:1, exportedWithModelVersion:APP_VERSION, updatedAt:new Date().toISOString(), savedMocks:state.savedMocks, currentDraft:state.currentDraft };
     const blob = new Blob([JSON.stringify(backup,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

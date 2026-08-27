@@ -1,6 +1,5 @@
 {
   "version": 1,
-  "exportedWithModelVersion": "2.5.4",
   "updatedAt": "2026-08-27T18:43:48.507Z",
   "savedMocks": [
     {
@@ -8,10 +7,6 @@
       "name": "12 team, pick 11, WR/RB/WR/RB/QB/RB (Amon/Henry)",
       "leagueId": "12",
       "draftSlot": 11,
-      "modelVersion": "2.5.4",
-      "modelVersionsUsed": [
-        "2.5.4"
-      ],
       "createdAt": "2026-08-27T17:59:59.079Z",
       "updatedAt": "2026-08-27T18:29:50.806Z",
       "picks": [
@@ -1175,10 +1170,6 @@
       "name": "12 team, pick 11, WR/RB/WR/WR/TE/QB (JJ/Achane)",
       "leagueId": "12",
       "draftSlot": 11,
-      "modelVersion": "2.5.4",
-      "modelVersionsUsed": [
-        "2.5.4"
-      ],
       "createdAt": "2026-08-27T17:17:02.691Z",
       "updatedAt": "2026-08-27T17:53:29.403Z",
       "picks": [
@@ -2343,10 +2334,6 @@
     "name": "12 team, pick 11, WR/RB/WR/RB/QB/RB (Amon/Henry)",
     "leagueId": "12",
     "draftSlot": 11,
-    "modelVersion": "2.5.4",
-    "modelVersionsUsed": [
-      "2.5.4"
-    ],
     "createdAt": "2026-08-27T17:59:59.079Z",
     "updatedAt": "2026-08-27T18:29:50.806Z",
     "picks": [

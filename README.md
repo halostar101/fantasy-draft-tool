@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.5.4
+# Fantasy Draft Companion (2026) — v2.5.5
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -17,6 +17,7 @@ No backend, MySQL, Node server, or account system is required.
 - Uses ESPN rank as a **modest value prior**, rather than either copying ESPN or ignoring it.
 - Autosaves the active draft and saved mocks in browser storage.
 - Saves mock snapshots and compares two or more mock teams.
+- Records the model version used for each draft so mock-draft calibration data stays attributable as the algorithm evolves.
 - Exports/imports `draft-backup.json` for manual GitHub backup.
 
 ## Important v2 changes
@@ -39,6 +40,14 @@ No backend, MySQL, Node server, or account system is required.
 
 
 
+
+## v2.5.5 model-provenance + cache-busting patch
+
+- Added an explicit app/model version constant and records `modelVersion` plus `modelVersionsUsed` on new drafts and saved mock snapshots. If a draft spans an app update, the version history records both model versions instead of silently pretending the whole draft came from one build.
+- Backup exports now include `exportedWithModelVersion`, making it easy to tell which build created a JSON export. Older v1 backup files remain import-compatible.
+- Saved-mock cards show the recorded model version so calibration datasets can be separated by algorithm version.
+- Fixed the stale header badge and added a version query to `app.js` (`app.js?v=2.5.5`) to reduce browser/GitHub Pages caching confusion after updates.
+- No valuation, availability, Monte Carlo, urgency, or opponent-selection math changed in this patch.
 
 ## v2.5.4 tied-group opportunity-cost patch
 
