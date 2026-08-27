@@ -38,7 +38,11 @@
     simulationsPerCandidate: 64,
     simulatedUserCandidateLimit: 36,
     singletonDeferredCredit: 0.88,
-    specialUrgencyThreshold: 0.30
+    deferredFuturePickDiscount: 0.97,
+    horizonBenchVorpWeight: 0.10,
+    scarcityForecastTurns: 4,
+    specialUrgencyThreshold: 0.30,
+    specialReliability: { 'D/ST': 0.30, K: 0.40 }
   };
 
   let dataset = null;
@@ -382,6 +386,72 @@
     return same.sort((a,b) => b.rank - a.rank)[0];
   }
 
+  function expectedBestPositionProjectionAtPick(position, availablePlayers, fromPick, targetPick) {
+    if (!targetPick || targetPick <= fromPick) return { expectedProjection:0, likelyPlayer:null, likelyProbability:0 };
+    const options = availablePlayers.filter(p => p.position === position && Number.isFinite(p.projectedPoints))
+      .map(p => ({
+        player: p,
+        projection: p.projectedPoints,
+        survival: 1 - conditionalGoneProbability(p, fromPick, targetPick)
+      }))
+      .filter(x => x.survival > 0.01)
+      .sort((a,b) => b.projection - a.projection || a.player.rank - b.player.rank);
+
+    let remainingProbability = 1;
+    let expectedProjection = 0;
+    let likelyPlayer = null;
+    let likelyProbability = 0;
+    for (const option of options) {
+      const takeProbability = remainingProbability * option.survival;
+      expectedProjection += takeProbability * option.projection;
+      if (takeProbability > likelyProbability) {
+        likelyProbability = takeProbability;
+        likelyPlayer = option.player;
+      }
+      remainingProbability *= (1 - option.survival);
+      if (remainingProbability < 0.003) break;
+    }
+    return { expectedProjection, likelyPlayer, likelyProbability };
+  }
+
+  function positionDepthForecast(position, availablePlayers, draft = state.currentDraft, context = decisionContext(draft)) {
+    const fromPick = context?.decisionPick || context?.current || currentOverallPick(draft);
+    if (!fromPick) return { position, fromPick:null, forecasts:[] };
+    const futurePicks = [];
+    let cursor = fromPick + 1;
+    while (futurePicks.length < MODEL.scarcityForecastTurns) {
+      const next = nextUserPick(cursor, draft);
+      if (!next) break;
+      futurePicks.push(next);
+      cursor = next + 1;
+    }
+    const forecasts = futurePicks.map((pick, i) => ({
+      turn:i + 1,
+      pick,
+      ...expectedBestPositionProjectionAtPick(position, availablePlayers, fromPick, pick)
+    }));
+    return { position, fromPick, forecasts };
+  }
+
+  function multiTurnScarcityForecast(player, availablePlayers, draft = state.currentDraft, context = decisionContext(draft), depthBase = null) {
+    if (!player || !Number.isFinite(player.projectedPoints)) return { safeTurns:0, timingFactor:1, forecasts:[], threshold:0 };
+    const base = depthBase || positionDepthForecast(player.position, availablePlayers, draft, context);
+    const forecasts = base.forecasts.map(f => ({ ...f, drop:Math.max(0, player.projectedPoints - f.expectedProjection) }));
+    const threshold = Math.max(6, player.projectedPoints * 0.04);
+    let safeTurns = 0;
+    for (const f of forecasts) {
+      if (f.drop <= threshold) safeTurns += 1;
+      else break;
+    }
+    const factors = [1, 0.84, 0.70, 0.58, 0.50];
+    const timingFactor = factors[Math.min(safeTurns, factors.length - 1)];
+    return { safeTurns, timingFactor, forecasts, threshold };
+  }
+
+  function projectionReliabilityFactor(position) {
+    return MODEL.specialReliability[position] ?? 1;
+  }
+
   function marginalRosterValue(player, rosterPlayers, draft = state.currentDraft) {
     const config = configFor(draft);
     const model = leagueModels[draft.leagueId];
@@ -398,8 +468,10 @@
     const structuralValue = Math.max(0, starterGain, MODEL.benchVorpWeight * Math.max(0, rawVorp));
     const fitFactor = starterGain > 0.5 ? 1 : 0.35;
     const marketPrior = (model.marketPrior.get(player.id) || 0) * fitFactor;
-    const decisionValue = (1 - MODEL.marketPriorWeight) * structuralValue + MODEL.marketPriorWeight * marketPrior;
-    return { rawVorp, rawVols, starterGain, structuralValue, marketPrior, decisionValue };
+    const reliability = projectionReliabilityFactor(player.position);
+    const undiscountedDecisionValue = (1 - MODEL.marketPriorWeight) * structuralValue + MODEL.marketPriorWeight * marketPrior;
+    const decisionValue = undiscountedDecisionValue * reliability;
+    return { rawVorp, rawVols, starterGain, structuralValue, marketPrior, reliability, undiscountedDecisionValue, decisionValue };
   }
 
   function buildNextPickPool(availablePlayers, draft, context) {
@@ -428,10 +500,24 @@
   function expectedBestNextPick(firstPlayer, rosterPlayers, draft, context, nextPickPool) {
     if (!context.followingPick || !context.decisionPick) return { expectedValue:0, likelyPlayer:null, likelyProbability:0 };
     const nextRoster = rosterPlayers.concat(firstPlayer);
+    const afterNextPick = nextUserPick(context.followingPick + 1, draft);
+    const nextContext = { current:context.followingPick, decisionPick:context.followingPick, followingPick:afterNextPick, onClock:true };
+    const poolPlayers = nextPickPool.map(x => x.player);
+    const depthByPosition = new Map(ALL_POSITIONS.map(pos => [pos, positionDepthForecast(pos, poolPlayers, draft, nextContext)]));
     const options = nextPickPool.filter(x => x.player.id !== firstPlayer.id).map(x => {
       const value = marginalRosterValue(x.player, nextRoster, draft);
-      return { player:x.player, value:value.decisionValue || 0, survival:x.survival };
-    }).filter(x => x.value > 0).sort((a,b) => b.value - a.value || a.player.rank - b.player.rank);
+      const alt = afterNextPick ? expectedAlternative(x.player, poolPlayers, afterNextPick) : null;
+      const altValue = alt ? marginalRosterValue(alt, nextRoster, draft).decisionValue : null;
+      const waitCost = Number.isFinite(altValue) ? (value.decisionValue || 0) - altValue : 0;
+      const gone = afterNextPick ? conditionalGoneProbability(x.player, context.followingPick, afterNextPick) : 1;
+      const scarcity = multiTurnScarcityForecast(x.player, poolPlayers, draft, nextContext, depthByPosition.get(x.player.position));
+      const urgency = urgencyScore(value.decisionValue || 0, gone, waitCost) * scarcity.timingFactor;
+      if (!rosterRelevant(x.player, nextRoster, draft, nextContext, urgency)) return null;
+      const core = coreSkillStatus(nextRoster, draft);
+      if (core.filled < core.slots && !rosterImpact(x.player, nextRoster, draft).improvesStarter) return null;
+      const selectionScore = (value.decisionValue || 0) * (0.72 + 0.28 * urgency) + Math.max(0, waitCost) * 0.30;
+      return { player:x.player, value:value.decisionValue || 0, survival:x.survival, urgency, selectionScore };
+    }).filter(Boolean).filter(x => x.value > 0).sort((a,b) => b.selectionScore - a.selectionScore || b.value - a.value || a.player.rank - b.player.rank);
 
     let remainingProbability = 1;
     let expectedValue = 0;
@@ -510,6 +596,7 @@
     const candidates = pool.slice(0, Math.min(MODEL.simulatedUserCandidateLimit, pool.length));
     const nextPick = nextUserPick(overallPick + 1, draft);
     const context = { decisionPick: overallPick, followingPick: nextPick, onClock:true };
+    const depthByPosition = new Map();
     let best = null;
     for (const p of candidates) {
       const value = marginalRosterValue(p, roster, draft);
@@ -518,7 +605,9 @@
       const altValue = alt ? marginalRosterValue(alt, roster, draft).decisionValue : null;
       const waitCost = Number.isFinite(altValue) ? value.decisionValue - altValue : 0;
       const gone = nextPick ? conditionalGoneProbability(p, overallPick, nextPick) : 1;
-      const urgency = urgencyScore(value.decisionValue, gone, waitCost);
+      if (!depthByPosition.has(p.position)) depthByPosition.set(p.position, positionDepthForecast(p.position, pool, draft, context));
+      const scarcity = multiTurnScarcityForecast(p, pool, draft, context, depthByPosition.get(p.position));
+      const urgency = urgencyScore(value.decisionValue, gone, waitCost) * scarcity.timingFactor;
       if (!rosterRelevant(p, roster, draft, context, urgency)) continue;
 
       // When RB/WR/FLEX capacity is still open, do not simulate a future choice that
@@ -595,23 +684,46 @@
     return player.position === 'RB' || player.position === 'WR';
   }
 
-  function horizonRosterScore(roster, draft = state.currentDraft) {
+  function horizonRosterScore(roster, draft = state.currentDraft, remainingPool = [], horizonPick = null) {
     const model = leagueModels[draft.leagueId];
     const offense = offensiveStarterProjection(roster, draft);
     let deferred = 0;
+    const nextPick = horizonPick ? nextUserPick(horizonPick + 1, draft) : null;
+
     // Do not pretend empty RB/WR/FLEX slots will magically be fixed later; that is the
-    // exact scarcity signal the simulation is meant to expose. QB and TE are different:
-    // viable draft strategies intentionally defer them, so grant a conservative fraction
-    // of the modeled last-starter baseline if they remain open at the horizon.
+    // scarcity signal the simulation is meant to expose. QB and TE are different because
+    // viable strategies intentionally defer them. Instead of a fixed placeholder only,
+    // estimate the best same-position production likely to remain at the next turn after
+    // the horizon. This lets a flat TE/QB tier retain real option value beyond four picks.
     for (const row of offense.allocated) {
       if (!row.player && (row.slot === 'QB' || row.slot === 'TE')) {
-        deferred += MODEL.singletonDeferredCredit * (model.starterBaseline[row.slot] || 0);
+        const fallback = MODEL.singletonDeferredCredit * (model.starterBaseline[row.slot] || 0);
+        const future = nextPick
+          ? expectedBestPositionProjectionAtPick(row.slot, remainingPool, horizonPick, nextPick).expectedProjection * MODEL.deferredFuturePickDiscount
+          : 0;
+        deferred += Math.max(0, future || fallback);
       }
     }
+
+    // Once RB/WR/FLEX starters are actually filled, useful RB/WR bench depth has some
+    // residual value rather than becoming literally worthless at the arbitrary horizon.
+    // Keep the weight small so starter construction still dominates.
+    let benchResidual = 0;
+    const core = coreSkillStatus(roster, draft);
+    if (core.filled >= core.slots) {
+      const bench = allocateRoster(roster, configFor(draft))
+        .filter(x => x.slot.startsWith('BN') && x.player && (x.player.position === 'RB' || x.player.position === 'WR'))
+        .map(x => Math.max(0, model.vorp.get(x.player.id) || 0))
+        .sort((a,b) => b-a)
+        .slice(0, 2);
+      benchResidual = bench.reduce((sum, v) => sum + v * MODEL.horizonBenchVorpWeight, 0);
+    }
+
     return {
-      score: offense.total + deferred,
+      score: offense.total + deferred + benchResidual,
       actualStarterProjection: offense.total,
       deferred,
+      benchResidual,
       filled: offense.filled,
       starterSlots: offense.starterSlots
     };
@@ -663,7 +775,7 @@
         }
       }
 
-      const horizon = horizonRosterScore(roster, draft);
+      const horizon = horizonRosterScore(roster, draft, pool, lastUserPick);
       scores.push(horizon.score);
       filledTotal += horizon.filled;
       const pairKey = JSON.stringify([pathPositions.join(' → '), pathPlayers.join(' → ')]);
@@ -690,7 +802,7 @@
   }
 
   function simulationResults(allRecs, draft = state.currentDraft) {
-    const key = `${draft.id}|${draft.updatedAt}|${draft.leagueId}|${draft.draftSlot}|${draft.picks.length}|sim-v2`;
+    const key = `${draft.id}|${draft.updatedAt}|${draft.leagueId}|${draft.draftSlot}|${draft.picks.length}|sim-v3`;
     if (simulationCache.key === key) return simulationCache.results;
     const results = new Map();
     const context = decisionContext(draft);
@@ -714,7 +826,7 @@
     return results;
   }
 
-  function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft, context = decisionContext(draft), nextPickPool = buildNextPickPool(availablePlayers, draft, context)) {
+  function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft, context = decisionContext(draft), nextPickPool = buildNextPickPool(availablePlayers, draft, context), depthForecasts = null) {
     const value = marginalRosterValue(player, rosterPlayers, draft);
     if (!Number.isFinite(value.decisionValue)) {
       return { player, ...value, currentValue:-Infinity, onClockScore:-Infinity, targetScore:-Infinity, pathValue:null, waitCost:null, gone:0, beforeMyPick:0, alt:null, expectedNext:null, urgency:0, tier:null };
@@ -730,6 +842,7 @@
     const expectedNext = expectedBestNextPick(player, rosterPlayers, draft, context, nextPickPool);
     const pathValue = value.decisionValue + expectedNext.expectedValue;
     const marketValue = context.decisionPick ? context.decisionPick - player.rank : 0;
+    const scarcity = multiTurnScarcityForecast(player, availablePlayers, draft, context, depthForecasts?.get(player.position));
 
     // Keep three questions separate instead of hiding them in one blended score:
     // 1) currentValue = how much we value the player if he is available right now.
@@ -737,13 +850,14 @@
     // 3) onClockScore = two-pick path value once the choice is real and availability is known.
     const currentValue = value.decisionValue;
     const targetAvailability = context.onClock ? 1 : (1 - beforeMyPick);
-    const urgency = urgencyScore(currentValue, gone, waitCost);
+    const rawUrgency = urgencyScore(currentValue, gone, waitCost);
+    const urgency = Math.max(0.08, Math.min(1, rawUrgency * scarcity.timingFactor));
     const targetUrgencyFactor = 0.35 + 0.65 * urgency;
     const targetScore = currentValue * targetAvailability * targetUrgencyFactor;
     const onClockScore = pathValue;
 
     return {
-      player, ...value, alt, waitCost, vona:waitCost, gone, beforeMyPick, expectedNext, urgency,
+      player, ...value, alt, waitCost, vona:waitCost, gone, beforeMyPick, expectedNext, scarcity, rawUrgency, urgency,
       currentValue, targetScore, onClockScore, pathValue, marketValue, targetPick:context.followingPick,
       tier: tiers[player.position]?.get(player.id) || null
     };
@@ -755,7 +869,8 @@
     if (!context.onClock) {
       if (valueRank) pieces.push(`#${valueRank} on the current-value board`);
       if (context.decisionPick) pieces.push(`${pct(1 - rec.beforeMyPick)} estimated chance to reach ${formatPick(context.decisionPick, configFor())}`);
-      if (rec.urgency < 0.25 && context.followingPick) pieces.push(`low urgency: the model expects a good chance you can wait another turn`);
+      if (rec.scarcity?.safeTurns >= 2) pieces.push(`low positional urgency: comparable ${rec.player.position} production is forecast to remain for about ${rec.scarcity.safeTurns} turns`);
+      else if (rec.urgency < 0.25 && context.followingPick) pieces.push(`low urgency: the model expects a good chance you can wait another turn`);
       else if (rec.urgency >= 0.60) pieces.push(`high urgency if you want him: waiting carries meaningful availability or tier-drop risk`);
       else if (Number.isFinite(rec.rawVols)) pieces.push(`${fmt(rec.rawVols)} pts over the last modeled ${rec.player.position} starter`);
       return pieces.slice(0,3).join('; ') + '.';
@@ -766,7 +881,8 @@
     if (Number.isFinite(rec.starterGain) && rec.starterGain > 8) pieces.push(`adds ${fmt(rec.starterGain)} pts above the modeled starter baseline now`);
     else if (Number.isFinite(rec.rawVols)) pieces.push(`${fmt(rec.rawVols)} pts over the last modeled ${rec.player.position} starter`);
     if (!simulation && rec.expectedNext?.likelyPlayer && rec.targetPick) pieces.push(`two-pick lookahead most often pairs him with ${rec.expectedNext.likelyPlayer.name} around ${formatPick(rec.targetPick, configFor())}`);
-    if (Number.isFinite(rec.waitCost) && rec.waitCost > 8 && rec.alt) pieces.push(`waiting at ${rec.player.position} costs about ${fmt(rec.waitCost)} model-value vs ${rec.alt.name}`);
+    if (rec.scarcity?.safeTurns >= 2) pieces.push(`${rec.player.position} depth looks flat for about ${rec.scarcity.safeTurns} more turns`);
+    else if (Number.isFinite(rec.waitCost) && rec.waitCost > 8 && rec.alt) pieces.push(`waiting at ${rec.player.position} costs about ${fmt(rec.waitCost)} model-value vs ${rec.alt.name}`);
     else if (rec.gone >= .65 && rec.targetPick) pieces.push(`${pct(rec.gone)} directional chance of going before ${formatPick(rec.targetPick, configFor())} if you pass`);
     if (!pieces.length) pieces.push('strong current player value with a favorable multi-pick roster path');
     return pieces.slice(0,3).join('; ') + '.';
@@ -834,7 +950,8 @@
     const roster = userRosterIds().map(id => playerMap.get(id)).filter(Boolean);
     const context = decisionContext(draft);
     const nextPickPool = buildNextPickPool(available, draft, context);
-    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool))
+    const depthForecasts = new Map(ALL_POSITIONS.map(pos => [pos, positionDepthForecast(pos, available, draft, context)]));
+    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool, depthForecasts))
       .sort((a,b) => b.currentValue - a.currentValue || a.player.rank - b.player.rank);
     recommendationCache = { key, recs };
     return recs;
@@ -863,7 +980,7 @@
         recs = eligibleNow.filter(r => simulations.has(r.player.id))
           .sort((a,b) => simulations.get(b.player.id).avgHorizonScore - simulations.get(a.player.id).avgHorizonScore || b.onClockScore - a.onClockScore || a.player.rank - b.player.rank)
           .slice(0,3);
-        els.recommendationHint.textContent = 'Cards are ranked by a Monte Carlo outlook across this pick plus your next three selections, using rational future picks that avoid direct-to-bench RB/WR selections while core RB/WR/FLEX capacity is still open. Empty QB/TE slots receive only a conservative deferred-credit so late-QB/TE strategies remain viable. The immediate two-pick view remains visible separately.';
+        els.recommendationHint.textContent = 'Cards are ranked by the average Monte Carlo outlook across this pick plus your next three selections. Future picks avoid direct-to-bench RB/WR choices while core RB/WR/FLEX capacity is open, and a separate multi-turn position-depth forecast lets the model recognize flat QB/TE tiers that can safely be deferred beyond the four-pick horizon. The immediate two-pick view remains visible separately and now follows the same roster rules.';
       } else {
         recs = immediate.slice(0,3);
         els.recommendationHint.textContent = 'Your offensive starting slots are filled, so the longer-horizon roster-construction simulation steps aside and the cards use the immediate two-pick view for depth and late-round decisions.';
@@ -877,7 +994,7 @@
         .slice(0,3);
       els.recommendationEyebrow.textContent = 'Planning ahead';
       els.recommendationTitle.textContent = context.decisionPick ? `Priority targets at ${formatPick(context.decisionPick, config)}` : 'Priority targets';
-      els.recommendationHint.textContent = 'This is a planning list, not a player ranking. It shows roster-relevant players who can plausibly reach your upcoming pick, then discounts options that are also likely to survive your following pick. Already-covered positions stay visible only when the player would improve your starting lineup. The Draft Board below stays ordered by player value.';
+      els.recommendationHint.textContent = 'This is a planning list, not a player ranking. It shows roster-relevant players who can plausibly reach your upcoming pick, then discounts options that are likely to remain replaceable across several later turns. Already-covered positions stay visible only when the player would improve your starting lineup. The Draft Board below stays ordered by intrinsic player value.';
     }
 
     els.recommendationCards.innerHTML = recs.map((r,i) => {
@@ -886,8 +1003,8 @@
       const sim = simulations.get(p.id) || null;
       const displayedGone = context.onClock ? r.gone : r.beforeMyPick;
       const goneLabel = context.onClock ? 'Gone if wait' : 'Gone by my pick';
-      const badge = context.onClock && sim ? `${sim.picksPlanned}-pick ${fmt(sim.avgHorizonScore,0)}` : (context.onClock ? `2-pick ${fmt(r.pathValue)}` : `Avail ${pct(1 - r.beforeMyPick)}`);
-      const label = context.onClock ? `#${i+1} ${sim?.picksPlanned || 2}-pick outlook` : `#${i+1} priority target`;
+      const badge = context.onClock && sim ? `Avg ${sim.picksPlanned}-pick ${fmt(sim.avgHorizonScore,0)}` : (context.onClock ? `2-pick ${fmt(r.pathValue)}` : `Avail ${pct(1 - r.beforeMyPick)}`);
+      const label = context.onClock ? `#${i+1} ${sim ? `avg ${sim.picksPlanned}-pick outlook` : '2-pick outlook'}` : `#${i+1} priority target`;
       return `<article class="rec-card">
         <div class="rec-rank">
           <div>
@@ -905,6 +1022,7 @@
           <div><span title="Timing signal: combines gone-if-wait risk with the relative same-position value drop. It affects recommendation timing, not Draft Board value.">Urgency</span><strong>${pct(r.urgency)}</strong></div>
         </div>
         ${context.onClock ? `<div class="path-line"><span>Immediate 2-pick:</span><strong>${fmt(r.pathValue)}</strong><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>` : ''}
+        ${r.scarcity?.forecasts?.length ? `<div class="path-line"><span>Position depth:</span><strong>${r.scarcity.safeTurns ? `safe ~${r.scarcity.safeTurns} turn${r.scarcity.safeTurns === 1 ? '' : 's'}` : 'cliff near'}</strong><span>Proj if waiting:</span><strong>${r.scarcity.forecasts.map(f => fmt(f.expectedProjection,0)).join(' → ')}</strong></div>` : ''}
         ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common ${sim.picksPlanned}-pick shape:</span><strong>${escapeHtml(sim.positionPath || '—')}</strong><span>Middle 50%:</span><strong>${fmt(sim.p25,0)}–${fmt(sim.p75,0)} horizon pts</strong><span>Avg starters filled:</span><strong>${fmt(sim.avgFilledStarters,1)}/${config.rosterSlots.filter(slot => !['D/ST','K'].includes(slot)).length}</strong></div>` : ''}
         ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common player path:</span><strong>${escapeHtml(sim.playerPath || '—')}</strong></div>` : ''}
         <p class="rec-reason">${escapeHtml(recommendationReason(r, rank, sim, immediateRank.get(p.id)))}</p>
@@ -958,7 +1076,7 @@
     const goneMeaning = context.onClock
       ? `chance the player is drafted before your following pick ${formatPick(context.followingPick, config)} if you pass`
       : `chance the player is drafted before your upcoming pick ${formatPick(context.decisionPick, config)}`;
-    els.boardFootnote.textContent = `${recs.length} available shown. The default Draft Board order is current model value only; availability does not change that order. VOLS uses the modeled last starter and VORP uses the deeper waiver line. “Gone” is the ${goneMeaning}; it is a heuristic based on ESPN rank because the PDF does not include ADP. Two-pick lookahead and urgency are used only for the recommendation cards above; the Draft Board remains an intrinsic current-value view.`;
+    els.boardFootnote.textContent = `${recs.length} available shown. The default Draft Board order is current model value only; availability does not change that order. VOLS uses the modeled last starter and VORP uses the deeper waiver line. K and D/ST keep their raw projections/VOLS visible but receive a heuristic reliability discount in Model Value because preseason special-position projections are less actionable and easier to replace/stream. “Gone” is the ${goneMeaning}; it is a heuristic based on ESPN rank because the PDF does not include ADP. Two-pick and multi-turn timing signals are used only for recommendation timing; the Draft Board remains an intrinsic current-value view.`;
   }
 
   function renderRoster() {
