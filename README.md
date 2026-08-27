@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.5.2
+# Fantasy Draft Companion (2026) — v2.5.3
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -40,9 +40,17 @@ No backend, MySQL, Node server, or account system is required.
 
 
 
+## v2.5.3 adaptive Monte Carlo performance update
+
+- Reworked the on-clock simulation into a **two-stage 64 → 256 process**. Every serious candidate is first screened on the same 64 deterministic scenarios; only the strongest and strategically protected finalists are extended through the remaining 192 scenarios. Cards are ranked only from candidates that completed all 256 paths.
+- The finalist safeguard keeps the top five screening results, anyone within 1% of the screening leader, the top three immediate two-pick options, and the best screened QB/RB/WR/TE candidate. This reduces the chance that a useful positional alternative is discarded by a noisy 64-path screen.
+- Simplified the evaluator used for your *future simulated picks*. It still uses roster fit, current model value, one-turn wait cost, availability, and the direct-to-bench constraint, but it no longer recalculates the full multi-turn positional-depth forecast for dozens of players inside every simulated decision.
+- The full multi-turn depth forecast remains active for the real draft decision and for horizon scoring, so late-QB/late-TE option value is preserved.
+- The goal is lower browser latency without reducing the final 256-path precision of the players that actually reach Decision Support.
+
 ## v2.5.2 simulation stability + tie handling
 
-- Increased the automatic Monte Carlo sample from **64 to 256 deterministic paths per serious on-clock candidate**. This cuts sampling noise roughly in half while remaining lightweight enough for a browser-only draft tool.
+- Increased the final Monte Carlo sample from **64 to 256 deterministic paths for finalist on-clock candidates**. v2.5.3 now reaches that precision adaptively rather than running all 256 paths for every screened candidate.
 - Added explicit **essentially tied** handling. Any candidate whose average four-pick outlook is within **0.5% of the best simulated average** is shown as part of the top group rather than implying that a tiny point difference is strategically meaningful.
 - The displayed card still shows the exact average and common path, but a tie callout tells you to use player preference, risk tolerance, or tier judgment as the tiebreaker.
 - Simulation scenarios remain reproducible: identical league, slot, and pick history generate the same 256 paths and the same results after an undo returns you to the same board.
@@ -76,7 +84,7 @@ No backend, MySQL, Node server, or account system is required.
 ## v2.3 four-pick Monte Carlo outlook
 
 - The browser runs the simulations automatically. You do **not** run hundreds of mock drafts yourself.
-- The original v2.3 implementation used 64 deterministic, rank-driven paths per serious on-clock candidate. v2.5.2 raises the live default to 256 per candidate for lower sampling noise; across the candidate set this means thousands of plausible paths can be evaluated automatically after each pick.
+- The original v2.3 implementation used 64 deterministic, rank-driven paths per serious on-clock candidate. v2.5.2 raised the final sample to 256; v2.5.3 keeps 256-path finalist precision while using a 64-path screening stage to avoid spending the full budget on clearly trailing candidates.
 - Opponent selections are sampled from the best remaining ESPN-ranked players with a tighter distribution early and more variance later. This is a directional draft-room model, not a claim of calibrated ADP probabilities.
 - After every simulated opponent run, the tool makes your future selections using the same roster-aware value engine. Positional scarcity emerges as the simulated board depletes and roster slots fill rather than through a separate forced position bonus.
 - Each candidate is evaluated across your current selection plus up to the next three selections (for example, 3.11 → 4.02 → 5.11 → 6.02).

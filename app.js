@@ -35,6 +35,9 @@
     lookaheadCandidateLimit: 48,
     simulationCandidateLimit: 10,
     simulationExtraPerPosition: 1,
+    simulationScreeningCount: 64,
+    simulationFinalistCount: 5,
+    simulationFinalistNearPct: 0.01,
     simulationsPerCandidate: 256,
     simulationTiePct: 0.005,
     simulatedUserCandidateLimit: 36,
@@ -603,7 +606,6 @@
     const candidates = pool.slice(0, Math.min(MODEL.simulatedUserCandidateLimit, pool.length));
     const nextPick = nextUserPick(overallPick + 1, draft);
     const context = { decisionPick: overallPick, followingPick: nextPick, onClock:true };
-    const depthByPosition = new Map();
     let best = null;
     for (const p of candidates) {
       const value = marginalRosterValue(p, roster, draft);
@@ -612,9 +614,12 @@
       const altValue = alt ? marginalRosterValue(alt, roster, draft).decisionValue : null;
       const waitCost = Number.isFinite(altValue) ? value.decisionValue - altValue : 0;
       const gone = nextPick ? conditionalGoneProbability(p, overallPick, nextPick) : 1;
-      if (!depthByPosition.has(p.position)) depthByPosition.set(p.position, positionDepthForecast(p.position, pool, draft, context));
-      const scarcity = multiTurnScarcityForecast(p, pool, draft, context, depthByPosition.get(p.position));
-      const urgency = urgencyScore(value.decisionValue, gone, waitCost) * scarcity.timingFactor;
+
+      // Keep simulated future picks intentionally lightweight. The full multi-turn
+      // positional-depth forecast is calculated for the real decision and at the
+      // simulation horizon; recalculating it for dozens of players inside every
+      // simulated pick added a great deal of work without adding comparable signal.
+      const urgency = urgencyScore(value.decisionValue, gone, waitCost);
       if (!rosterRelevant(p, roster, draft, context, urgency)) continue;
 
       // When RB/WR/FLEX capacity is still open, do not simulate a future choice that
@@ -750,17 +755,18 @@
     return selected;
   }
 
-  function simulateFourPickOutlook(firstRec, allAvailable, rosterPlayers, draft = state.currentDraft) {
+  function runFourPickSimulationBatch(firstRec, allAvailable, rosterPlayers, draft = state.currentDraft, simStart = 0, simCount = MODEL.simulationsPerCandidate) {
     const current = currentOverallPick(draft);
     const futurePicks = futureUserPicks(current, draft, 3);
     const userPicks = [current, ...futurePicks];
     const lastUserPick = userPicks[userPicks.length - 1];
-    const simCount = futurePicks.length ? MODEL.simulationsPerCandidate : 1;
+    const count = futurePicks.length ? simCount : 1;
     const scores = [];
     let filledTotal = 0;
     const pathPairs = new Map();
 
-    for (let sim = 0; sim < simCount; sim += 1) {
+    for (let offset = 0; offset < count; offset += 1) {
+      const sim = simStart + offset;
       const rng = mulberry32(hashString(`${draftStateFingerprint(draft)}|scenario-${sim}`));
       const pool = allAvailable.filter(p => p.id !== firstRec.player.id).slice().sort((a,b) => a.rank - b.rank);
       const roster = rosterPlayers.concat(firstRec.player);
@@ -789,27 +795,46 @@
       pathPairs.set(pairKey, (pathPairs.get(pairKey) || 0) + 1);
     }
 
-    scores.sort((a,b) => a-b);
+    return { scores, filledTotal, pathPairs, simulations:count, picksPlanned:userPicks.length, lastUserPick };
+  }
+
+  function mergeSimulationBatches(first, second) {
+    if (!first) return second;
+    if (!second) return first;
+    const pathPairs = new Map(first.pathPairs);
+    for (const [key, count] of second.pathPairs.entries()) pathPairs.set(key, (pathPairs.get(key) || 0) + count);
+    return {
+      scores:first.scores.concat(second.scores),
+      filledTotal:first.filledTotal + second.filledTotal,
+      pathPairs,
+      simulations:first.simulations + second.simulations,
+      picksPlanned:first.picksPlanned,
+      lastUserPick:first.lastUserPick
+    };
+  }
+
+  function finalizeSimulationBatch(batch) {
+    const scores = batch.scores.slice().sort((a,b) => a-b);
     const avg = scores.reduce((sum,x) => sum+x, 0) / Math.max(1, scores.length);
     const p25 = scores[Math.floor((scores.length - 1) * 0.25)] || avg;
     const p75 = scores[Math.floor((scores.length - 1) * 0.75)] || avg;
-    const commonPairKey = Array.from(pathPairs.entries()).sort((a,b) => b[1] - a[1])[0]?.[0];
+    const commonPairKey = Array.from(batch.pathPairs.entries()).sort((a,b) => b[1] - a[1])[0]?.[0];
     const commonPair = commonPairKey ? JSON.parse(commonPairKey) : ['', ''];
     return {
-      avgHorizonScore: avg,
+      avgHorizonScore:avg,
       p25,
       p75,
-      avgFilledStarters: filledTotal / Math.max(1, scores.length),
-      positionPath: commonPair[0],
-      playerPath: commonPair[1],
-      simulations: simCount,
-      picksPlanned: userPicks.length,
-      lastUserPick
+      avgFilledStarters:batch.filledTotal / Math.max(1, batch.simulations),
+      positionPath:commonPair[0],
+      playerPath:commonPair[1],
+      simulations:batch.simulations,
+      picksPlanned:batch.picksPlanned,
+      lastUserPick:batch.lastUserPick
     };
   }
 
   function simulationResults(allRecs, draft = state.currentDraft) {
-    const key = `${draftStateFingerprint(draft)}|sim-v5`;
+    const key = `${draftStateFingerprint(draft)}|sim-v6-adaptive`;
     if (simulationCache.key === key) return simulationCache.results;
     const results = new Map();
     const context = decisionContext(draft);
@@ -826,9 +851,52 @@
     const drafted = draftedSet(draft);
     const available = players.filter(p => !drafted.has(p.id)).sort((a,b) => a.rank - b.rank);
     const roster = currentRoster;
-    for (const rec of buildSimulationCandidates(allRecs, roster, draft)) {
-      results.set(rec.player.id, simulateFourPickOutlook(rec, available, roster, draft));
+    const candidates = buildSimulationCandidates(allRecs, roster, draft);
+    if (!candidates.length) {
+      simulationCache = { key, results };
+      return results;
     }
+
+    // Stage 1: cheaply screen every serious candidate on the same first 64 scenarios.
+    // This preserves cross-candidate comparability while avoiding 256 full paths for
+    // players that are clearly behind after the initial screen.
+    const screeningCount = Math.min(MODEL.simulationScreeningCount, MODEL.simulationsPerCandidate);
+    const screeningBatches = new Map();
+    const screeningResults = new Map();
+    for (const rec of candidates) {
+      const batch = runFourPickSimulationBatch(rec, available, roster, draft, 0, screeningCount);
+      screeningBatches.set(rec.player.id, batch);
+      screeningResults.set(rec.player.id, finalizeSimulationBatch(batch));
+    }
+
+    const screened = candidates.slice().sort((a,b) =>
+      screeningResults.get(b.player.id).avgHorizonScore - screeningResults.get(a.player.id).avgHorizonScore ||
+      b.onClockScore - a.onClockScore || a.player.rank - b.player.rank
+    );
+    const bestScreen = screeningResults.get(screened[0].player.id).avgHorizonScore;
+    const nearTolerance = Math.max(1, Math.abs(bestScreen) * MODEL.simulationFinalistNearPct);
+    const finalistIds = new Set();
+    const addFinalist = rec => { if (rec) finalistIds.add(rec.player.id); };
+
+    // Always advance the strongest screen results. Also protect against a noisy 64-path
+    // screen by advancing anyone very close to the leader, the best immediate two-pick
+    // options, and the best screened candidate at each core offensive position.
+    screened.slice(0, MODEL.simulationFinalistCount).forEach(addFinalist);
+    screened.filter(rec => Math.abs(bestScreen - screeningResults.get(rec.player.id).avgHorizonScore) <= nearTolerance).forEach(addFinalist);
+    candidates.slice().sort((a,b) => b.onClockScore - a.onClockScore || a.player.rank - b.player.rank).slice(0, 3).forEach(addFinalist);
+    ['QB','RB','WR','TE'].forEach(pos => addFinalist(screened.find(rec => rec.player.position === pos)));
+
+    const remainingCount = Math.max(0, MODEL.simulationsPerCandidate - screeningCount);
+    for (const rec of candidates) {
+      if (!finalistIds.has(rec.player.id)) continue;
+      let combined = screeningBatches.get(rec.player.id);
+      if (remainingCount > 0) {
+        const finalBatch = runFourPickSimulationBatch(rec, available, roster, draft, screeningCount, remainingCount);
+        combined = mergeSimulationBatches(combined, finalBatch);
+      }
+      results.set(rec.player.id, finalizeSimulationBatch(combined));
+    }
+
     simulationCache = { key, results };
     return results;
   }
@@ -995,7 +1063,7 @@
           ? simulatedEligible.filter(r => Math.abs(simulationTopAvg - simulations.get(r.player.id).avgHorizonScore) <= simulationTieTolerance).length
           : 0;
         recs = simulatedEligible.slice(0,3);
-        els.recommendationHint.textContent = 'Cards are ranked by the average of 256 deterministic Monte Carlo paths across this pick plus your next three selections. Candidates within 0.5% of the best average are labeled essentially tied so tiny sampling differences are not treated as meaningful. Future picks avoid direct-to-bench RB/WR choices while core RB/WR/FLEX capacity is open, and the separate multi-turn position-depth forecast recognizes flat QB/TE tiers that can safely be deferred beyond the four-pick horizon. The immediate two-pick view remains visible separately and follows the same roster rules.';
+        els.recommendationHint.textContent = 'Decision Support now uses an adaptive Monte Carlo: every serious candidate is screened on the same 64 deterministic paths, then the strongest and strategically protected finalists are extended to 256 paths. Cards are ranked only from the 256-path finalist set. Candidates within 0.5% of the best average are labeled essentially tied. Simulated future picks use a lighter one-turn evaluator while the full multi-turn position-depth forecast remains active for the real decision and horizon scoring.';
       } else {
         recs = immediate.slice(0,3);
         els.recommendationHint.textContent = 'Your offensive starting slots are filled, so the longer-horizon roster-construction simulation steps aside and the cards use the immediate two-pick view for depth and late-round decisions.';
