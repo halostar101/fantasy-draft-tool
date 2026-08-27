@@ -418,6 +418,43 @@
     return { expectedProjection, likelyPlayer, likelyProbability };
   }
 
+  function expectedBestPositionValueAtPick(position, availablePlayers, rosterPlayers, draft, fromPick, targetPick) {
+    if (!targetPick || targetPick <= fromPick) return { expectedValue:0, likelyPlayer:null, likelyProbability:0 };
+
+    // Decision Support cares about the *position* we can still buy next turn, not only
+    // whether this exact player survives. Include the current candidate in the pool: if
+    // he survives, he can still be the best option; if he goes, comparable tier-mates can
+    // preserve much of the position's value. This deliberately does not replace the
+    // player-specific Gone metric shown on the Draft Board.
+    const options = availablePlayers.filter(p => p.position === position && Number.isFinite(p.projectedPoints))
+      .map(p => {
+        const value = marginalRosterValue(p, rosterPlayers, draft).decisionValue;
+        return {
+          player:p,
+          value:Number.isFinite(value) ? value : 0,
+          survival:1 - conditionalGoneProbability(p, fromPick, targetPick)
+        };
+      })
+      .filter(x => x.value > 0 && x.survival > 0.01)
+      .sort((a,b) => b.value - a.value || a.player.rank - b.player.rank);
+
+    let remainingProbability = 1;
+    let expectedValue = 0;
+    let likelyPlayer = null;
+    let likelyProbability = 0;
+    for (const option of options) {
+      const takeProbability = remainingProbability * option.survival;
+      expectedValue += takeProbability * option.value;
+      if (takeProbability > likelyProbability) {
+        likelyProbability = takeProbability;
+        likelyPlayer = option.player;
+      }
+      remainingProbability *= (1 - option.survival);
+      if (remainingProbability < 0.003) break;
+    }
+    return { expectedValue, likelyPlayer, likelyProbability };
+  }
+
   function positionDepthForecast(position, availablePlayers, draft = state.currentDraft, context = decisionContext(draft)) {
     const fromPick = context?.decisionPick || context?.current || currentOverallPick(draft);
     if (!fromPick) return { position, fromPick:null, forecasts:[] };
@@ -669,6 +706,16 @@
     return Math.max(0.12, Math.min(1, 0.12 + 0.58 * safeNumber(goneIfWait, 0) + 0.30 * relativeDrop));
   }
 
+  function positionOpportunityUrgencyScore(currentValue, opportunityCost) {
+    if (!Number.isFinite(currentValue) || currentValue <= 0) return 0;
+    // The tier-aware opportunity cost already incorporates the chance this player and
+    // comparable alternatives survive to the next turn. Do not add Gone a second time
+    // here; keep exact-player Gone visible as its own metric. Square-root scaling makes
+    // a meaningful relative cliff visible without letting tiny differences dominate.
+    const relativeDrop = Math.max(0, Math.min(1, safeNumber(opportunityCost, 0) / Math.max(1, currentValue)));
+    return Math.max(0.08, Math.min(1, 0.08 + 0.92 * Math.sqrt(relativeDrop)));
+  }
+
   function specialPositionEligible(player, roster, draft, context, urgency = 0) {
     if (player.position !== 'D/ST' && player.position !== 'K') return true;
     const offense = offensiveStarterProjection(roster, draft);
@@ -834,7 +881,7 @@
   }
 
   function simulationResults(allRecs, draft = state.currentDraft) {
-    const key = `${draftStateFingerprint(draft)}|sim-v6-adaptive`;
+    const key = `${draftStateFingerprint(draft)}|sim-v7-adaptive-tier-tiebreak`;
     if (simulationCache.key === key) return simulationCache.results;
     const results = new Map();
     const context = decisionContext(draft);
@@ -901,10 +948,10 @@
     return results;
   }
 
-  function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft, context = decisionContext(draft), nextPickPool = buildNextPickPool(availablePlayers, draft, context), depthForecasts = null) {
+  function recommendationFor(player, availablePlayers, rosterPlayers, draft = state.currentDraft, context = decisionContext(draft), nextPickPool = buildNextPickPool(availablePlayers, draft, context), depthForecasts = null, positionNextValueForecasts = null) {
     const value = marginalRosterValue(player, rosterPlayers, draft);
     if (!Number.isFinite(value.decisionValue)) {
-      return { player, ...value, currentValue:-Infinity, onClockScore:-Infinity, targetScore:-Infinity, pathValue:null, waitCost:null, gone:0, beforeMyPick:0, alt:null, expectedNext:null, urgency:0, tier:null };
+      return { player, ...value, currentValue:-Infinity, onClockScore:-Infinity, targetScore:-Infinity, pathValue:null, waitCost:null, opportunityCost:null, expectedPositionNext:null, gone:0, beforeMyPick:0, alt:null, expectedNext:null, urgency:0, tier:null };
     }
 
     const alt = context.followingPick ? expectedAlternative(player, availablePlayers, context.followingPick) : null;
@@ -925,14 +972,27 @@
     // 3) onClockScore = two-pick path value once the choice is real and availability is known.
     const currentValue = value.decisionValue;
     const targetAvailability = context.onClock ? 1 : (1 - beforeMyPick);
-    const rawUrgency = urgencyScore(currentValue, gone, waitCost);
+    const expectedPositionNext = context.onClock && positionNextValueForecasts
+      ? (positionNextValueForecasts.get(player.position) || null)
+      : null;
+    const opportunityCost = expectedPositionNext && Number.isFinite(expectedPositionNext.expectedValue)
+      ? Math.max(0, currentValue - expectedPositionNext.expectedValue)
+      : (Number.isFinite(waitCost) ? Math.max(0, waitCost) : 0);
+
+    // Before our turn, keep the lighter player-specific wait signal. Once on the clock,
+    // use a tier-aware position opportunity cost: passing on Davante is less urgent when
+    // DeVonta/Egbuka-type alternatives are also likely to survive, while a unique QB
+    // tier can remain urgent even if the long-horizon Monte Carlo is effectively tied.
+    const rawUrgency = context.onClock
+      ? positionOpportunityUrgencyScore(currentValue, opportunityCost)
+      : urgencyScore(currentValue, gone, waitCost);
     const urgency = Math.max(0.08, Math.min(1, rawUrgency * scarcity.timingFactor));
     const targetUrgencyFactor = 0.35 + 0.65 * urgency;
     const targetScore = currentValue * targetAvailability * targetUrgencyFactor;
     const onClockScore = pathValue;
 
     return {
-      player, ...value, alt, waitCost, vona:waitCost, gone, beforeMyPick, expectedNext, scarcity, rawUrgency, urgency,
+      player, ...value, alt, waitCost, vona:waitCost, opportunityCost, expectedPositionNext, gone, beforeMyPick, expectedNext, scarcity, rawUrgency, urgency,
       currentValue, targetScore, onClockScore, pathValue, marketValue, targetPick:context.followingPick,
       tier: tiers[player.position]?.get(player.id) || null
     };
@@ -1026,7 +1086,10 @@
     const context = decisionContext(draft);
     const nextPickPool = buildNextPickPool(available, draft, context);
     const depthForecasts = new Map(ALL_POSITIONS.map(pos => [pos, positionDepthForecast(pos, available, draft, context)]));
-    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool, depthForecasts))
+    const positionNextValueForecasts = context.onClock && context.followingPick && context.decisionPick
+      ? new Map(ALL_POSITIONS.map(pos => [pos, expectedBestPositionValueAtPick(pos, available, roster, draft, context.decisionPick, context.followingPick)]))
+      : null;
+    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool, depthForecasts, positionNextValueForecasts))
       .sort((a,b) => b.currentValue - a.currentValue || a.player.rank - b.player.rank);
     recommendationCache = { key, recs };
     return recs;
@@ -1049,21 +1112,37 @@
     let simulationTopAvg = null;
     let simulationTieTolerance = 0;
     let simulationTieCount = 0;
+    let simulationTieRank = new Map();
     if (context.onClock) {
       const eligibleNow = all.filter(r => rosterRelevant(r.player, userRosterIds().map(id => playerMap.get(id)).filter(Boolean), state.currentDraft, context, r.urgency));
       const immediate = eligibleNow.slice().sort((a,b) => b.onClockScore - a.onClockScore || b.currentValue - a.currentValue || a.player.rank - b.player.rank);
       immediateRank = new Map(immediate.map((r,i) => [r.player.id, i + 1]));
       simulations = simulationResults(all);
       if (simulations.size) {
-        const simulatedEligible = eligibleNow.filter(r => simulations.has(r.player.id))
+        const simulatedByAverage = eligibleNow.filter(r => simulations.has(r.player.id))
           .sort((a,b) => simulations.get(b.player.id).avgHorizonScore - simulations.get(a.player.id).avgHorizonScore || b.onClockScore - a.onClockScore || a.player.rank - b.player.rank);
-        simulationTopAvg = simulations.get(simulatedEligible[0]?.player.id)?.avgHorizonScore ?? null;
+        simulationTopAvg = simulations.get(simulatedByAverage[0]?.player.id)?.avgHorizonScore ?? null;
         simulationTieTolerance = Number.isFinite(simulationTopAvg) ? Math.max(1, Math.abs(simulationTopAvg) * MODEL.simulationTiePct) : 0;
-        simulationTieCount = Number.isFinite(simulationTopAvg)
-          ? simulatedEligible.filter(r => Math.abs(simulationTopAvg - simulations.get(r.player.id).avgHorizonScore) <= simulationTieTolerance).length
-          : 0;
-        recs = simulatedEligible.slice(0,3);
-        els.recommendationHint.textContent = 'Decision Support now uses an adaptive Monte Carlo: every serious candidate is screened on the same 64 deterministic paths, then the strongest and strategically protected finalists are extended to 256 paths. Cards are ranked only from the 256-path finalist set. Candidates within 0.5% of the best average are labeled essentially tied. Simulated future picks use a lighter one-turn evaluator while the full multi-turn position-depth forecast remains active for the real decision and horizon scoring.';
+        const tied = Number.isFinite(simulationTopAvg)
+          ? simulatedByAverage.filter(r => Math.abs(simulationTopAvg - simulations.get(r.player.id).avgHorizonScore) <= simulationTieTolerance)
+          : [];
+        simulationTieCount = tied.length;
+
+        // Once the Monte Carlo says candidates are effectively tied, do not let a
+        // meaningless one-point horizon difference choose the recommendation order.
+        // Break that top tie using tier-aware urgency / cost of postponing the position.
+        const tiedSorted = tied.slice().sort((a,b) =>
+          safeNumber(b.opportunityCost, 0) - safeNumber(a.opportunityCost, 0) ||
+          b.urgency - a.urgency ||
+          b.onClockScore - a.onClockScore ||
+          b.currentValue - a.currentValue ||
+          a.player.rank - b.player.rank
+        );
+        simulationTieRank = new Map(tiedSorted.map((r,i) => [r.player.id, i + 1]));
+        const tiedIds = new Set(tiedSorted.map(r => r.player.id));
+        const rest = simulatedByAverage.filter(r => !tiedIds.has(r.player.id));
+        recs = tiedSorted.concat(rest).slice(0,3);
+        els.recommendationHint.textContent = 'Decision Support uses an adaptive Monte Carlo: every serious candidate is screened on the same 64 deterministic paths, then the strongest and strategically protected finalists are extended to 256 paths. Candidates within 0.5% of the best average are treated as one top group; inside that group, ordering is broken first by the expected tier-aware cost of postponing that position, then by urgency, rather than tiny simulation-point differences. Draft Board Gone remains the chance of losing that exact player.';
       } else {
         recs = immediate.slice(0,3);
         els.recommendationHint.textContent = 'Your offensive starting slots are filled, so the longer-horizon roster-construction simulation steps aside and the cards use the immediate two-pick view for depth and late-round decisions.';
@@ -1088,11 +1167,12 @@
       const goneLabel = context.onClock ? 'Gone if wait' : 'Gone by my pick';
       const badge = context.onClock && sim ? `Avg ${sim.picksPlanned}-pick ${fmt(sim.avgHorizonScore,0)}` : (context.onClock ? `2-pick ${fmt(r.pathValue)}` : `Avail ${pct(1 - r.beforeMyPick)}`);
       const isSimulationTie = Boolean(context.onClock && sim && Number.isFinite(simulationTopAvg) && Math.abs(simulationTopAvg - sim.avgHorizonScore) <= simulationTieTolerance && simulationTieCount > 1);
+      const tieRank = simulationTieRank.get(p.id) || null;
       const label = context.onClock
-        ? (sim ? `${isSimulationTie ? 'Top group' : `#${i+1}`} • avg ${sim.picksPlanned}-pick outlook` : `#${i+1} 2-pick outlook`)
+        ? (sim ? `${isSimulationTie ? `Top group • tie-break #${tieRank || '—'}` : `#${i+1}`} • avg ${sim.picksPlanned}-pick outlook` : `#${i+1} 2-pick outlook`)
         : `#${i+1} priority target`;
       const tieMessage = isSimulationTie
-        ? `Essentially tied with the top ${sim.picksPlanned}-pick outlook (within ${(MODEL.simulationTiePct * 100).toFixed(1)}%). Treat the ordering inside this group as a preference/tier decision.`
+        ? `Essentially tied on the ${sim.picksPlanned}-pick average (within ${(MODEL.simulationTiePct * 100).toFixed(1)}%). Tie-break order uses the tier-aware cost of waiting at this position first, then urgency; preference is still reasonable when those signals are also close.`
         : '';
       return `<article class="rec-card">
         <div class="rec-rank">
@@ -1108,9 +1188,9 @@
           <div><span>Model value</span><strong>${fmt(r.currentValue)}</strong></div>
           <div><span>VOLS</span><strong>${fmt(r.rawVols)}</strong></div>
           <div><span>${goneLabel}</span><strong>${pct(displayedGone)}</strong></div>
-          <div><span title="Timing signal: combines gone-if-wait risk with the relative same-position value drop. It affects recommendation timing, not Draft Board value.">Urgency</span><strong>${pct(r.urgency)}</strong></div>
+          <div><span title="Timing signal: on the clock, reflects the tier-aware positional opportunity cost, which already incorporates expected survival of this player and comparable alternatives; before your turn it uses the lighter one-turn wait signal. It affects recommendation timing, not Draft Board value.">Urgency</span><strong>${pct(r.urgency)}</strong></div>
         </div>
-        ${context.onClock ? `<div class="path-line"><span>Immediate 2-pick:</span><strong>${fmt(r.pathValue)}</strong><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong></div>` : ''}
+        ${context.onClock ? `<div class="path-line"><span>Immediate 2-pick:</span><strong>${fmt(r.pathValue)}</strong><span>Likely next:</span><strong>${r.expectedNext?.likelyPlayer ? escapeHtml(r.expectedNext.likelyPlayer.name) : '—'}</strong><span title="Tier-aware model-value loss from postponing this position until your next turn. Unlike Gone, this considers comparable same-position alternatives that may remain.">Position cost if wait:</span><strong>${fmt(r.opportunityCost)}</strong></div>` : ''}
         ${r.scarcity?.forecasts?.length ? `<div class="path-line"><span>Position depth:</span><strong>${r.scarcity.safeTurns ? `safe ~${r.scarcity.safeTurns} turn${r.scarcity.safeTurns === 1 ? '' : 's'}` : 'cliff near'}</strong><span>Proj if waiting:</span><strong>${r.scarcity.forecasts.map(f => fmt(f.expectedProjection,0)).join(' → ')}</strong></div>` : ''}
         ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common ${sim.picksPlanned}-pick shape:</span><strong>${escapeHtml(sim.positionPath || '—')}</strong><span>Middle 50%:</span><strong>${fmt(sim.p25,0)}–${fmt(sim.p75,0)} horizon pts</strong><span>Avg starters filled:</span><strong>${fmt(sim.avgFilledStarters,1)}/${config.rosterSlots.filter(slot => !['D/ST','K'].includes(slot)).length}</strong></div>` : ''}
         ${context.onClock && sim ? `<div class="path-line simulation-path"><span>Common player path:</span><strong>${escapeHtml(sim.playerPath || '—')}</strong></div>` : ''}

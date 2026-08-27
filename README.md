@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.5.3
+# Fantasy Draft Companion (2026) — v2.5.4
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -39,6 +39,15 @@ No backend, MySQL, Node server, or account system is required.
 
 
 
+
+## v2.5.4 tied-group opportunity-cost patch
+
+- **Draft Board Gone stays player-specific.** It still answers “what is the chance I lose this exact player before the relevant pick?”; the board does not replace that with a positional-tier probability.
+- Added a separate **Position cost if wait** signal to on-clock Decision Support. It estimates the best same-position Model Value expected to remain at your next turn, including the current player if he survives and comparable tier-mates if he does not. This makes a crowded WR tier less urgent than a uniquely strong QB tier when the alternatives support that conclusion.
+- On-clock **Urgency** now derives from that tier-aware position cost, which already incorporates the estimated survival of the player and his alternatives; exact-player **Gone** remains visible separately instead of being double-counted in the urgency number.
+- When multiple 256-path finalists finish within the existing **0.5% essentially-tied band**, tiny Monte Carlo differences no longer determine their left-to-right ranking. The top group is tie-broken by positional opportunity cost first, then urgency, then the immediate two-pick view/current value.
+- The card label now shows **tie-break #1/#2/#3** inside an essentially tied top group, while the exact Avg 4-pick score remains visible. This preserves the Monte Carlo result without presenting a one-point difference as stronger evidence than the short-term opportunity cost.
+- Planning Ahead remains the lighter pre-turn planning model, and the adaptive 64 → 256 simulation architecture is unchanged. Opponent team-needs weighting is intentionally deferred until mock-draft data can justify it.
 
 ## v2.5.3 adaptive Monte Carlo performance update
 
