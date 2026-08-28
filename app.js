@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '2.5.5';
+  const APP_VERSION = '2.6.0';
 
   const STORAGE = {
     current: 'fantasy-draft-tool:v1:currentDraft',
@@ -46,6 +46,15 @@
     singletonDeferredCredit: 0.88,
     deferredFuturePickDiscount: 0.97,
     horizonBenchVorpWeight: 0.10,
+    benchDepthWeights: [1, 0.78, 0.58, 0.44, 0.34],
+    benchCoverageMaxBoost: 0.18,
+    benchImbalanceMaxPenalty: 0.22,
+    opponentRoomMinSamples: 10,
+    opponentRoomLookback: 48,
+    opponentRoomFactorMin: 0.84,
+    opponentRoomFactorMax: 1.18,
+    opponentReachProbMin: 0.03,
+    opponentReachProbMax: 0.34,
     scarcityForecastTurns: 4,
     specialUrgencyThreshold: 0.30,
     specialReliability: { 'D/ST': 0.30, K: 0.40 }
@@ -92,12 +101,30 @@
     return JSON.parse(JSON.stringify(obj));
   }
 
+  function currentPlayerDataVersion() {
+    return dataset?.metadata?.modelDataVersion || dataset?.metadata?.sourceCapturedAt || 'unknown';
+  }
+
   function recordModelVersion(draft) {
     if (!draft) return;
     if (!draft.modelVersion) draft.modelVersion = APP_VERSION;
     const versions = Array.isArray(draft.modelVersionsUsed) ? draft.modelVersionsUsed.slice() : [draft.modelVersion];
     if (!versions.includes(APP_VERSION)) versions.push(APP_VERSION);
     draft.modelVersionsUsed = versions.filter(Boolean);
+  }
+
+  function recordPlayerDataVersion(draft) {
+    if (!draft) return;
+    const active = currentPlayerDataVersion();
+    if (!draft.playerDataVersion) draft.playerDataVersion = active;
+    const versions = Array.isArray(draft.playerDataVersionsUsed) ? draft.playerDataVersionsUsed.slice() : [draft.playerDataVersion];
+    if (active && active !== 'unknown' && !versions.includes(active)) versions.push(active);
+    draft.playerDataVersionsUsed = versions.filter(Boolean);
+  }
+
+  function recordDraftProvenance(draft) {
+    recordModelVersion(draft);
+    recordPlayerDataVersion(draft);
   }
 
   function modelVersionLabel(draft) {
@@ -107,6 +134,15 @@
     if (!versions.length) return 'model unknown';
     if (versions.length === 1) return `model v${versions[0]}`;
     return `models ${versions.map(v => `v${v}`).join(' → ')}`;
+  }
+
+  function playerDataVersionLabel(draft) {
+    const versions = Array.isArray(draft?.playerDataVersionsUsed) && draft.playerDataVersionsUsed.length
+      ? draft.playerDataVersionsUsed
+      : (draft?.playerDataVersion ? [draft.playerDataVersion] : []);
+    if (!versions.length) return 'data unknown';
+    if (versions.length === 1) return `data ${versions[0]}`;
+    return `data ${versions.join(' → ')}`;
   }
 
   function configFor(draft = state.currentDraft) {
@@ -132,6 +168,8 @@
       updatedAt: new Date().toISOString(),
       modelVersion: APP_VERSION,
       modelVersionsUsed: [APP_VERSION],
+      playerDataVersion: currentPlayerDataVersion(),
+      playerDataVersionsUsed: [currentPlayerDataVersion()].filter(v => v && v !== 'unknown'),
       picks: []
     };
   }
@@ -514,6 +552,24 @@
     return MODEL.specialReliability[position] ?? 1;
   }
 
+  function benchDepthFactor(player, rosterPlayers, draft = state.currentDraft, starterGain = 0) {
+    if (starterGain > 0.5 || (player.position !== 'RB' && player.position !== 'WR')) return 1;
+    const sameCount = rosterPlayers.filter(p => p.position === player.position).length;
+    const otherPosition = player.position === 'RB' ? 'WR' : 'RB';
+    const otherCount = rosterPlayers.filter(p => p.position === otherPosition).length;
+    const weights = MODEL.benchDepthWeights;
+    const sameDepthIndex = Math.max(0, sameCount - 2);
+    let factor = weights[Math.min(sameDepthIndex, weights.length - 1)] || weights[weights.length - 1];
+
+    // Human mock behavior strongly favored restoring RB/WR balance once one side of the
+    // roster had accumulated extra depth. Keep this deliberately soft: it should make a
+    // first useful WR backup more valuable than RB5, not prohibit an exceptional RB fall.
+    const imbalance = sameCount - otherCount;
+    if (imbalance > 0) factor *= 1 - Math.min(MODEL.benchImbalanceMaxPenalty, imbalance * 0.08);
+    else if (imbalance < 0) factor *= 1 + Math.min(MODEL.benchCoverageMaxBoost, Math.abs(imbalance) * 0.07);
+    return Math.max(0.28, Math.min(1.18, factor));
+  }
+
   function marginalRosterValue(player, rosterPlayers, draft = state.currentDraft) {
     const config = configFor(draft);
     const model = leagueModels[draft.leagueId];
@@ -526,14 +582,18 @@
     const after = lineupValue(rosterPlayers.concat(player), config, model, 'starter');
     const starterGain = after - before;
     // Do not add VOLS and VORP together. A starter gets credit for the larger starter
-    // advantage; VORP acts mainly as a floor for bench/depth value.
-    const structuralValue = Math.max(0, starterGain, MODEL.benchVorpWeight * Math.max(0, rawVorp));
-    const fitFactor = starterGain > 0.5 ? 1 : 0.35;
+    // advantage; VORP acts mainly as a floor for bench/depth value. Once an RB/WR would
+    // be depth rather than a starter, apply diminishing same-position value and a small
+    // coverage bonus for the thinner side of the RB/WR room.
+    const depthFactor = benchDepthFactor(player, rosterPlayers, draft, starterGain);
+    const benchFloor = MODEL.benchVorpWeight * Math.max(0, rawVorp) * depthFactor;
+    const structuralValue = Math.max(0, starterGain, benchFloor);
+    const fitFactor = starterGain > 0.5 ? 1 : 0.35 * depthFactor;
     const marketPrior = (model.marketPrior.get(player.id) || 0) * fitFactor;
     const reliability = projectionReliabilityFactor(player.position);
     const undiscountedDecisionValue = (1 - MODEL.marketPriorWeight) * structuralValue + MODEL.marketPriorWeight * marketPrior;
     const decisionValue = undiscountedDecisionValue * reliability;
-    return { rawVorp, rawVols, starterGain, structuralValue, marketPrior, reliability, undiscountedDecisionValue, decisionValue };
+    return { rawVorp, rawVols, starterGain, structuralValue, marketPrior, reliability, depthFactor, undiscountedDecisionValue, decisionValue };
   }
 
   function buildNextPickPool(availablePlayers, draft, context) {
@@ -637,26 +697,154 @@
     return picks;
   }
 
-  function sampleOpponentPick(pool, overallPick, rng) {
+  function roundAtPick(overallPick, draft = state.currentDraft) {
+    return Math.floor((Math.max(1, overallPick) - 1) / configFor(draft).teams) + 1;
+  }
+
+  function opponentBaseParams(overallPick, draft = state.currentDraft) {
+    const round = roundAtPick(overallPick, draft);
+    // Human behavior should get less consensus-driven deeper into the draft. The normal
+    // mode stays fairly tight, while an explicit reach mode grows with round to represent
+    // sleepers, news, handcuffs and other context the app cannot observe.
+    const temperature = Math.min(16, 3.5 + (round - 1) * 0.82);
+    const normalCandidates = Math.min(42, 20 + Math.max(0, round - 2) * 2);
+    const reachCandidates = Math.min(72, 34 + Math.max(0, round - 3) * 3);
+    const reachProbability = Math.max(MODEL.opponentReachProbMin, Math.min(MODEL.opponentReachProbMax, 0.03 + (round - 1) * 0.025));
+    return { round, temperature, normalCandidates, reachCandidates, reachProbability };
+  }
+
+  function expectedOpponentOrdinal(pool, overallPick, draft = state.currentDraft) {
+    if (!pool.length) return 1;
+    const params = opponentBaseParams(overallPick, draft);
+    const count = Math.min(params.normalCandidates, pool.length);
+    const bestRank = pool[0].rank;
+    let total = 0;
+    let weightedOrdinal = 0;
+    for (let i = 0; i < count; i += 1) {
+      const w = Math.exp(-Math.max(0, pool[i].rank - bestRank) / params.temperature);
+      total += w;
+      weightedOrdinal += (i + 1) * w;
+    }
+    return total > 0 ? weightedOrdinal / total : 1;
+  }
+
+  function estimateRoomStyle(draft = state.currentDraft) {
+    const history = (draft?.picks || []).slice().sort((a,b) => a.pick - b.pick);
+    if (!history.length) return { factor:1, samples:0 };
+    const pool = players.slice().sort((a,b) => a.rank - b.rank);
+    const residuals = [];
+    for (const pick of history) {
+      const idx = pool.findIndex(p => p.id === pick.playerId);
+      if (idx < 0) continue;
+      if (!pick.isMine && pick.teamNumber !== draft.draftSlot) {
+        const expected = expectedOpponentOrdinal(pool, pick.pick, draft);
+        const observed = idx + 1;
+        const residual = Math.max(-1.1, Math.min(1.1, Math.log((observed + 0.75) / (expected + 0.75))));
+        residuals.push(residual);
+      }
+      pool.splice(idx, 1);
+    }
+    const recent = residuals.slice(-MODEL.opponentRoomLookback);
+    if (recent.length < MODEL.opponentRoomMinSamples) return { factor:1, samples:recent.length };
+    let weighted = 0;
+    let weightTotal = 0;
+    recent.forEach((r, i) => {
+      const w = 0.55 + 0.45 * ((i + 1) / recent.length);
+      weighted += r * w;
+      weightTotal += w;
+    });
+    const meanResidual = weighted / Math.max(1e-6, weightTotal);
+    const raw = Math.exp(meanResidual * 0.28);
+    const confidence = Math.min(1, (recent.length - MODEL.opponentRoomMinSamples + 1) / 24);
+    const blended = 1 + (raw - 1) * confidence;
+    return { factor:Math.max(MODEL.opponentRoomFactorMin, Math.min(MODEL.opponentRoomFactorMax, blended)), samples:recent.length };
+  }
+
+  function opponentRostersFromDraft(draft = state.currentDraft) {
+    const config = configFor(draft);
+    const rosters = new Map(Array.from({length:config.teams}, (_,i) => [i + 1, []]));
+    for (const pick of (draft?.picks || [])) {
+      const p = playerMap.get(pick.playerId);
+      if (p && rosters.has(pick.teamNumber)) rosters.get(pick.teamNumber).push(p);
+    }
+    return rosters;
+  }
+
+  function opponentNeedMultiplier(player, roster, overallPick, draft = state.currentDraft) {
+    const round = roundAtPick(overallPick, draft);
+    const counts = pos => roster.filter(p => p.position === pos).length;
+    const qb = counts('QB');
+    const te = counts('TE');
+    const rb = counts('RB');
+    const wr = counts('WR');
+    let m = 1;
+
+    if (player.position === 'QB') {
+      if (qb === 0) {
+        if (round <= 2) m *= 0.78;
+        else if (round <= 4) m *= 0.95;
+        else if (round <= 6) m *= 1.18;
+        else if (round <= 8) m *= 1.55;
+        else m *= 1.85;
+      } else if (qb === 1) m *= round <= 9 ? 0.38 : 0.62;
+      else m *= 0.16;
+    } else if (player.position === 'TE') {
+      if (te === 0) {
+        if (round <= 3) m *= 0.90;
+        else if (round <= 6) m *= 1.12;
+        else if (round <= 9) m *= 1.42;
+        else m *= 1.58;
+      } else if (te === 1) m *= round <= 10 ? 0.46 : 0.68;
+      else m *= 0.20;
+    } else if (player.position === 'RB' || player.position === 'WR') {
+      const imbalance = rb - wr;
+      if (player.position === 'WR' && imbalance > 0) m *= 1 + Math.min(0.34, imbalance * 0.13);
+      if (player.position === 'RB' && imbalance > 0) m *= 1 - Math.min(0.25, imbalance * 0.09);
+      if (player.position === 'RB' && imbalance < 0) m *= 1 + Math.min(0.34, Math.abs(imbalance) * 0.13);
+      if (player.position === 'WR' && imbalance < 0) m *= 1 - Math.min(0.25, Math.abs(imbalance) * 0.09);
+      if (round >= 5) {
+        if (player.position === 'RB' && rb < 2) m *= 1.12;
+        if (player.position === 'WR' && wr < 2) m *= 1.12;
+      }
+    } else if (player.position === 'D/ST' || player.position === 'K') {
+      const already = counts(player.position) > 0;
+      if (already) m *= 0.10;
+      else if (round <= 8) m *= 0.12;
+      else if (round <= 10) m *= 0.48;
+    }
+    return Math.max(0.08, Math.min(2.0, m));
+  }
+
+  function sampleOpponentPick(pool, overallPick, rng, draft = state.currentDraft, opponentRosters = null, roomStyle = null) {
     if (!pool.length) return null;
-    const candidateCount = Math.min(28, pool.length);
+    const params = opponentBaseParams(overallPick, draft);
+    const roomFactor = roomStyle?.factor || 1;
+    const reachProbability = Math.max(MODEL.opponentReachProbMin, Math.min(MODEL.opponentReachProbMax, params.reachProbability * Math.pow(roomFactor, 1.6)));
+    const reachMode = rng() < reachProbability;
+    const candidateCount = Math.min(reachMode ? params.reachCandidates : params.normalCandidates, pool.length);
     const candidates = pool.slice(0, candidateCount);
     const bestRank = candidates[0].rank;
-    const temperature = Math.max(3.5, Math.min(14, 3.5 + overallPick * 0.08));
+    const temperature = params.temperature * roomFactor * (reachMode ? 2.25 : 0.88);
+    const team = teamAtPick(overallPick, configFor(draft));
+    const roster = opponentRosters?.get(team) || [];
     let total = 0;
     const weights = candidates.map(p => {
       const delta = Math.max(0, p.rank - bestRank);
-      const w = Math.exp(-delta / temperature);
+      const rankWeight = Math.exp(-delta / Math.max(1.5, temperature));
+      const w = rankWeight * opponentNeedMultiplier(p, roster, overallPick, draft);
       total += w;
       return w;
     });
+    if (total <= 0) total = weights.length;
     let roll = rng() * total;
     let chosenIndex = 0;
     for (let i = 0; i < weights.length; i += 1) {
-      roll -= weights[i];
+      roll -= total === weights.length && weights[i] === 0 ? 1 : weights[i];
       if (roll <= 0) { chosenIndex = i; break; }
     }
-    return pool.splice(chosenIndex, 1)[0];
+    const chosen = pool.splice(chosenIndex, 1)[0];
+    if (chosen && opponentRosters?.has(team)) opponentRosters.get(team).push(chosen);
+    return chosen;
   }
 
   function chooseSimulatedUserPick(pool, roster, draft, overallPick) {
@@ -791,12 +979,19 @@
     let benchResidual = 0;
     const core = coreSkillStatus(roster, draft);
     if (core.filled >= core.slots) {
-      const bench = allocateRoster(roster, configFor(draft))
-        .filter(x => x.slot.startsWith('BN') && x.player && (x.player.position === 'RB' || x.player.position === 'WR'))
-        .map(x => Math.max(0, model.vorp.get(x.player.id) || 0))
-        .sort((a,b) => b-a)
-        .slice(0, 2);
-      benchResidual = bench.reduce((sum, v) => sum + v * MODEL.horizonBenchVorpWeight, 0);
+      const benchRows = allocateRoster(roster, configFor(draft))
+        .filter(x => x.slot.startsWith('BN') && x.player && (x.player.position === 'RB' || x.player.position === 'WR'));
+      const byPosition = { RB:[], WR:[] };
+      benchRows.forEach(x => byPosition[x.player.position].push(Math.max(0, model.vorp.get(x.player.id) || 0)));
+      const adjusted = [];
+      for (const pos of ['RB','WR']) {
+        byPosition[pos].sort((a,b) => b-a).forEach((v, i) => {
+          const depthWeight = MODEL.benchDepthWeights[Math.min(i, MODEL.benchDepthWeights.length - 1)] || 0.34;
+          adjusted.push(v * depthWeight);
+        });
+      }
+      adjusted.sort((a,b) => b-a);
+      benchResidual = adjusted.slice(0, 2).reduce((sum, v) => sum + v * MODEL.horizonBenchVorpWeight, 0);
     }
 
     return {
@@ -832,12 +1027,15 @@
     const scores = [];
     let filledTotal = 0;
     const pathPairs = new Map();
+    const baseOpponentRosters = opponentRostersFromDraft(draft);
+    const roomStyle = estimateRoomStyle(draft);
 
     for (let offset = 0; offset < count; offset += 1) {
       const sim = simStart + offset;
       const rng = mulberry32(hashString(`${draftStateFingerprint(draft)}|scenario-${sim}`));
       const pool = allAvailable.filter(p => p.id !== firstRec.player.id).slice().sort((a,b) => a.rank - b.rank);
       const roster = rosterPlayers.concat(firstRec.player);
+      const opponentRosters = new Map(Array.from(baseOpponentRosters.entries(), ([team, teamRoster]) => [team, teamRoster.slice()]));
       const pathPlayers = [firstRec.player.name];
       const pathPositions = [firstRec.player.position];
 
@@ -852,7 +1050,7 @@
             pathPositions.push(chosen.position);
           }
         } else {
-          sampleOpponentPick(pool, pick, rng);
+          sampleOpponentPick(pool, pick, rng, draft, opponentRosters, roomStyle);
         }
       }
 
@@ -1301,7 +1499,7 @@
     if (current > totalPicks(config)) return;
     if (draftedSet(draft).has(playerId)) return;
     const owner = teamAtPick(current, config);
-    recordModelVersion(draft);
+    recordDraftProvenance(draft);
     draft.picks.push({ pick: current, playerId, teamNumber: owner, isMine: owner === draft.draftSlot });
     draft.updatedAt = new Date().toISOString();
     persist();
@@ -1326,7 +1524,7 @@
   }
 
   function saveSnapshot() {
-    recordModelVersion(state.currentDraft);
+    recordDraftProvenance(state.currentDraft);
     const draft = deepClone(state.currentDraft);
     const config = configFor(draft);
     draft.id = uid('mock');
@@ -1351,7 +1549,7 @@
       return `<article class="mock-item">
         <div class="mock-item-head">
           <input class="mock-compare-check" type="checkbox" value="${mock.id}" aria-label="Compare ${escapeHtml(mock.name)}" ${checkedIds.has(mock.id) ? 'checked' : ''}>
-          <div><h3>${escapeHtml(mock.name)}</h3><div class="mock-meta">${config.name} • slot ${mock.draftSlot} • ${mine}/${rosterSize(config)} rostered • ${mock.picks.length} total picks • ${modelVersionLabel(mock)}</div></div>
+          <div><h3>${escapeHtml(mock.name)}</h3><div class="mock-meta">${config.name} • slot ${mock.draftSlot} • ${mine}/${rosterSize(config)} rostered • ${mock.picks.length} total picks • ${modelVersionLabel(mock)} • ${playerDataVersionLabel(mock)}</div></div>
           <span class="pos-badge">${mock.picks.length >= totalPicks(config) ? 'Complete' : 'Partial'}</span>
         </div>
         <div class="mock-actions">
@@ -1397,6 +1595,8 @@
     const rows = [
       ['League', i => metrics[i].config.name],
       ['Draft slot', i => mocks[i].draftSlot],
+      ['Recorded model', i => modelVersionLabel(mocks[i])],
+      ['Recorded player data', i => playerDataVersionLabel(mocks[i])],
       ['My roster', i => `${metrics[i].minePicks.length}/${rosterSize(metrics[i].config)}`],
       ['Starter projection', i => fmt(metrics[i].actualStarter)],
       ['Starter edge vs baseline', i => fmt(metrics[i].aboveReplacement)],
@@ -1441,10 +1641,16 @@
 
   function renderData() {
     const meta = dataset.metadata;
-    els.dataStamp.textContent = `${meta.playerCount} players • captured Aug 26, 2026`;
+    const captured = meta.sourceCapturedAt ? new Date(meta.sourceCapturedAt) : null;
+    const capturedLabel = captured && !Number.isNaN(captured.getTime())
+      ? captured.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})
+      : 'unknown date';
+    els.dataStamp.textContent = `${meta.playerCount} players • captured ${capturedLabel}`;
     els.datasetInfo.innerHTML = `
       <dt>Season</dt><dd>${meta.season}</dd>
       <dt>Players</dt><dd>${meta.playerCount}</dd>
+      <dt>Data version</dt><dd>${escapeHtml(meta.modelDataVersion || 'unknown')}</dd>
+      <dt>Captured</dt><dd>${escapeHtml(capturedLabel)}</dd>
       <dt>Source</dt><dd>Supplied ESPN pre-draft table</dd>
       <dt>Scoring</dt><dd>${escapeHtml(meta.scoringLabel)}</dd>`;
 
@@ -1475,7 +1681,7 @@
   }
 
   function exportBackup() {
-    const backup = { version:1, exportedWithModelVersion:APP_VERSION, updatedAt:new Date().toISOString(), savedMocks:state.savedMocks, currentDraft:state.currentDraft };
+    const backup = { version:1, exportedWithModelVersion:APP_VERSION, exportedWithPlayerDataVersion:currentPlayerDataVersion(), updatedAt:new Date().toISOString(), savedMocks:state.savedMocks, currentDraft:state.currentDraft };
     const blob = new Blob([JSON.stringify(backup,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

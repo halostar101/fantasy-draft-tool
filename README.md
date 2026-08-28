@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.5.5
+# Fantasy Draft Companion (2026) — v2.6.0
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -17,7 +17,7 @@ No backend, MySQL, Node server, or account system is required.
 - Uses ESPN rank as a **modest value prior**, rather than either copying ESPN or ignoring it.
 - Autosaves the active draft and saved mocks in browser storage.
 - Saves mock snapshots and compares two or more mock teams.
-- Records the model version used for each draft so mock-draft calibration data stays attributable as the algorithm evolves.
+- Records both the model version and player-data version used for each draft so mock-draft calibration data stays attributable as the algorithm and ESPN rankings evolve.
 - Exports/imports `draft-backup.json` for manual GitHub backup.
 
 ## Important v2 changes
@@ -40,6 +40,18 @@ No backend, MySQL, Node server, or account system is required.
 
 
 
+
+
+## v2.6.0 four-mock calibration update
+
+- **Opponent simulations now separate consensus picks from reaches.** The central mode remains anchored tightly to the best remaining ESPN-ranked players, while a separate reach mode becomes more likely and broader deeper into the draft. This acknowledges that late-round human picks increasingly reflect sleepers, injuries, news, handcuffs, trades, and other context the app cannot observe.
+- **Live-room variability adapts gently.** The app compares actual opponent selections with its round-specific baseline and applies a bounded 0.84–1.18 room-style factor. Chalky rooms tighten somewhat; reach-heavy rooms widen somewhat. Early rounds are not used as a universal late-round source of truth because the baseline itself broadens by round.
+- **Opponent roster needs now modify probabilities.** Unfilled QB/TE demand rises with round, already-filled QB/TE demand drops, and RB/WR imbalance nudges teams toward the thinner side. These are capped weights rather than hard rules.
+- **RB/WR bench depth now has diminishing marginal value.** Once a player no longer improves the starting lineup, repeated depth at the same position receives progressively less VORP/prior credit. A small coverage adjustment favors the thinner RB/WR side, addressing the observed RB4/RB5 over-recommendation without imposing a fixed roster quota.
+- **Monte Carlo horizon bench credit uses the same diminishing-depth idea.** Two redundant RB bench pieces no longer receive exactly the same residual treatment as one RB and one WR depth piece.
+- **Gone remains unchanged.** The player-specific rank-centered conditional Gone formula tested well enough across the four mocks that this release does not rewrite it; the new room/needs behavior affects simulated future paths, not the Draft Board Gone percentage.
+- **Player-data provenance is now recorded.** New/continued drafts track `playerDataVersion` and `playerDataVersionsUsed`; backup exports also include `exportedWithPlayerDataVersion`. Saved-mock cards show both model and data versions.
+- The active dataset is the ESPN snapshot captured **August 28, 2026** (`2026-08-28-v1`). Historical snapshots for August 26 and August 28 live under `data/snapshots/` for reproducible mock analysis.
 
 ## v2.5.5 model-provenance + cache-busting patch
 
@@ -152,7 +164,7 @@ After extracting/overwriting the changed files:
 ```bash
 git status
 git add .
-git commit -m "Increase Monte Carlo samples and flag ties"
+git commit -m "Calibrate opponent simulation and roster depth"
 git push
 ```
 
@@ -170,7 +182,7 @@ Your draft actions save immediately in the browser. For a durable/cross-device b
 
 ## Player data
 
-`data/players-2026.json` contains 400 players extracted from the supplied ESPN Pre-Draft Strategy PDF captured August 26, 2026. The PDF includes ESPN overall rank, projected stat columns, and projected fantasy points. It does **not** include ADP.
+`data/players-2026.json` contains the active 400-player ESPN snapshot captured August 28, 2026. Historical source snapshots are retained under `data/snapshots/` so old mock drafts can be analyzed against the rankings that existed when they were recorded. The PDF includes ESPN overall rank, projected stat columns, and projected fantasy points. It does **not** include ADP.
 
 Rebuild and validate the data with:
 

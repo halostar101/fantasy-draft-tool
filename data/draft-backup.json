@@ -1,8 +1,1846 @@
 {
   "version": 1,
-  "exportedWithModelVersion": "2.5.4",
-  "updatedAt": "2026-08-27T18:43:48.507Z",
+  "exportedWithModelVersion": "2.5.5",
+  "updatedAt": "2026-08-28T18:10:43.606Z",
   "savedMocks": [
+    {
+      "id": "mock-1787940445053-sg11ki",
+      "name": "12 team, pick 11, RB/RB/RB/WR/TE/QB",
+      "leagueId": "12",
+      "draftSlot": 11,
+      "createdAt": "2026-08-28T17:35:10.337Z",
+      "updatedAt": "2026-08-28T18:07:09.667Z",
+      "modelVersion": "2.5.5",
+      "modelVersionsUsed": [
+        "2.5.5"
+      ],
+      "picks": [
+        {
+          "pick": 1,
+          "playerId": "p002",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 2,
+          "playerId": "p001",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 3,
+          "playerId": "p004",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 4,
+          "playerId": "p005",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 5,
+          "playerId": "p006",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 6,
+          "playerId": "p010",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 7,
+          "playerId": "p003",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 8,
+          "playerId": "p008",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 9,
+          "playerId": "p012",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 10,
+          "playerId": "p009",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 11,
+          "playerId": "p007",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 12,
+          "playerId": "p011",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 13,
+          "playerId": "p020",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 14,
+          "playerId": "p019",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 15,
+          "playerId": "p022",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 16,
+          "playerId": "p018",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 17,
+          "playerId": "p021",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 18,
+          "playerId": "p013",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 19,
+          "playerId": "p028",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 20,
+          "playerId": "p025",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 21,
+          "playerId": "p014",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 22,
+          "playerId": "p017",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 23,
+          "playerId": "p015",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 24,
+          "playerId": "p026",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 25,
+          "playerId": "p016",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 26,
+          "playerId": "p036",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 27,
+          "playerId": "p024",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 28,
+          "playerId": "p031",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 29,
+          "playerId": "p038",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 30,
+          "playerId": "p023",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 31,
+          "playerId": "p032",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 32,
+          "playerId": "p029",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 33,
+          "playerId": "p035",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 34,
+          "playerId": "p027",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 35,
+          "playerId": "p030",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 36,
+          "playerId": "p044",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 37,
+          "playerId": "p039",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 38,
+          "playerId": "p034",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 39,
+          "playerId": "p049",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 40,
+          "playerId": "p040",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 41,
+          "playerId": "p037",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 42,
+          "playerId": "p060",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 43,
+          "playerId": "p043",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 44,
+          "playerId": "p046",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 45,
+          "playerId": "p033",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 46,
+          "playerId": "p047",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 47,
+          "playerId": "p042",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 48,
+          "playerId": "p041",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 49,
+          "playerId": "p051",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 50,
+          "playerId": "p045",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 51,
+          "playerId": "p056",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 52,
+          "playerId": "p059",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 53,
+          "playerId": "p052",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 54,
+          "playerId": "p061",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 55,
+          "playerId": "p048",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 56,
+          "playerId": "p062",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 57,
+          "playerId": "p053",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 58,
+          "playerId": "p055",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 59,
+          "playerId": "p050",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 60,
+          "playerId": "p054",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 61,
+          "playerId": "p074",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 62,
+          "playerId": "p057",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 63,
+          "playerId": "p067",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 64,
+          "playerId": "p065",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 65,
+          "playerId": "p075",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 66,
+          "playerId": "p058",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 67,
+          "playerId": "p072",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 68,
+          "playerId": "p076",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 69,
+          "playerId": "p071",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 70,
+          "playerId": "p064",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 71,
+          "playerId": "p063",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 72,
+          "playerId": "p068",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 73,
+          "playerId": "p096",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 74,
+          "playerId": "p077",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 75,
+          "playerId": "p098",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 76,
+          "playerId": "p083",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 77,
+          "playerId": "p094",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 78,
+          "playerId": "p082",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 79,
+          "playerId": "p073",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 80,
+          "playerId": "p103",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 81,
+          "playerId": "p069",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 82,
+          "playerId": "p101",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 83,
+          "playerId": "p079",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 84,
+          "playerId": "p099",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 85,
+          "playerId": "p116",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 86,
+          "playerId": "p097",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 87,
+          "playerId": "p088",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 88,
+          "playerId": "p087",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 89,
+          "playerId": "p066",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 90,
+          "playerId": "p100",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 91,
+          "playerId": "p125",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 92,
+          "playerId": "p128",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 93,
+          "playerId": "p091",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 94,
+          "playerId": "p109",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 95,
+          "playerId": "p102",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 96,
+          "playerId": "p095",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 97,
+          "playerId": "p115",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 98,
+          "playerId": "p080",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 99,
+          "playerId": "p081",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 100,
+          "playerId": "p070",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 101,
+          "playerId": "p123",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 102,
+          "playerId": "p181",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 103,
+          "playerId": "p078",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 104,
+          "playerId": "p089",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 105,
+          "playerId": "p105",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 106,
+          "playerId": "p107",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 107,
+          "playerId": "p108",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 108,
+          "playerId": "p110",
+          "teamNumber": 12,
+          "isMine": false
+        }
+      ],
+      "savedAt": "2026-08-28T18:07:25.053Z",
+      "playerDataVersion": "2026-08-28-v1",
+      "playerDataVersionsUsed": [
+        "2026-08-28-v1"
+      ]
+    },
+    {
+      "id": "mock-1787937011824-wz6a7h",
+      "name": "12 team, pick 11, RB/RB/QB/WR/RB/WR (Cook/Achane/Allen)",
+      "leagueId": "12",
+      "draftSlot": 11,
+      "createdAt": "2026-08-27T20:19:26.272Z",
+      "updatedAt": "2026-08-28T17:09:50.525Z",
+      "modelVersion": "2.5.5",
+      "modelVersionsUsed": [
+        "2.5.5"
+      ],
+      "picks": [
+        {
+          "pick": 1,
+          "playerId": "p001",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 2,
+          "playerId": "p002",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 3,
+          "playerId": "p004",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 4,
+          "playerId": "p003",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 5,
+          "playerId": "p005",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 6,
+          "playerId": "p007",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 7,
+          "playerId": "p006",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 8,
+          "playerId": "p019",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 9,
+          "playerId": "p008",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 10,
+          "playerId": "p011",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 11,
+          "playerId": "p012",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 12,
+          "playerId": "p009",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 13,
+          "playerId": "p018",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 14,
+          "playerId": "p010",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 15,
+          "playerId": "p020",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 16,
+          "playerId": "p021",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 17,
+          "playerId": "p022",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 18,
+          "playerId": "p013",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 19,
+          "playerId": "p031",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 20,
+          "playerId": "p024",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 21,
+          "playerId": "p028",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 22,
+          "playerId": "p014",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 23,
+          "playerId": "p025",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 24,
+          "playerId": "p016",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 25,
+          "playerId": "p032",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 26,
+          "playerId": "p042",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 27,
+          "playerId": "p023",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 28,
+          "playerId": "p029",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 29,
+          "playerId": "p030",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 30,
+          "playerId": "p026",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 31,
+          "playerId": "p015",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 32,
+          "playerId": "p043",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 33,
+          "playerId": "p060",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 34,
+          "playerId": "p039",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 35,
+          "playerId": "p036",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 36,
+          "playerId": "p017",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 37,
+          "playerId": "p038",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 38,
+          "playerId": "p034",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 39,
+          "playerId": "p062",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 40,
+          "playerId": "p049",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 41,
+          "playerId": "p037",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 42,
+          "playerId": "p044",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 43,
+          "playerId": "p035",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 44,
+          "playerId": "p033",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 45,
+          "playerId": "p040",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 46,
+          "playerId": "p041",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 47,
+          "playerId": "p048",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 48,
+          "playerId": "p050",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 49,
+          "playerId": "p061",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 50,
+          "playerId": "p055",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 51,
+          "playerId": "p027",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 52,
+          "playerId": "p047",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 53,
+          "playerId": "p045",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 54,
+          "playerId": "p064",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 55,
+          "playerId": "p046",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 56,
+          "playerId": "p051",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 57,
+          "playerId": "p052",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 58,
+          "playerId": "p077",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 59,
+          "playerId": "p059",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 60,
+          "playerId": "p065",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 61,
+          "playerId": "p057",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 62,
+          "playerId": "p054",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 63,
+          "playerId": "p056",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 64,
+          "playerId": "p097",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 65,
+          "playerId": "p058",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 66,
+          "playerId": "p073",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 67,
+          "playerId": "p071",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 68,
+          "playerId": "p074",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 69,
+          "playerId": "p096",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 70,
+          "playerId": "p072",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 71,
+          "playerId": "p068",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 72,
+          "playerId": "p053",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 73,
+          "playerId": "p063",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 74,
+          "playerId": "p069",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 75,
+          "playerId": "p075",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 76,
+          "playerId": "p130",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 77,
+          "playerId": "p076",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 78,
+          "playerId": "p082",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 79,
+          "playerId": "p083",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 80,
+          "playerId": "p067",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 81,
+          "playerId": "p106",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 82,
+          "playerId": "p070",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 83,
+          "playerId": "p103",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 84,
+          "playerId": "p080",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 85,
+          "playerId": "p089",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 86,
+          "playerId": "p098",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 87,
+          "playerId": "p102",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 88,
+          "playerId": "p078",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 89,
+          "playerId": "p104",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 90,
+          "playerId": "p066",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 91,
+          "playerId": "p084",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 92,
+          "playerId": "p100",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 93,
+          "playerId": "p086",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 94,
+          "playerId": "p087",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 95,
+          "playerId": "p108",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 96,
+          "playerId": "p095",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 97,
+          "playerId": "p079",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 98,
+          "playerId": "p105",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 99,
+          "playerId": "p081",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 100,
+          "playerId": "p113",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 101,
+          "playerId": "p092",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 102,
+          "playerId": "p093",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 103,
+          "playerId": "p121",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 104,
+          "playerId": "p107",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 105,
+          "playerId": "p085",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 106,
+          "playerId": "p099",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 107,
+          "playerId": "p101",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 108,
+          "playerId": "p116",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 109,
+          "playerId": "p111",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 110,
+          "playerId": "p128",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 111,
+          "playerId": "p125",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 112,
+          "playerId": "p118",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 113,
+          "playerId": "p094",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 114,
+          "playerId": "p110",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 115,
+          "playerId": "p088",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 116,
+          "playerId": "p090",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 117,
+          "playerId": "p122",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 118,
+          "playerId": "p127",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 119,
+          "playerId": "p091",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 120,
+          "playerId": "p124",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 121,
+          "playerId": "p126",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 122,
+          "playerId": "p117",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 123,
+          "playerId": "p138",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 124,
+          "playerId": "p159",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 125,
+          "playerId": "p135",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 126,
+          "playerId": "p146",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 127,
+          "playerId": "p134",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 128,
+          "playerId": "p119",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 129,
+          "playerId": "p109",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 130,
+          "playerId": "p120",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 131,
+          "playerId": "p132",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 132,
+          "playerId": "p181",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 133,
+          "playerId": "p136",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 134,
+          "playerId": "p196",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 135,
+          "playerId": "p169",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 136,
+          "playerId": "p133",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 137,
+          "playerId": "p115",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 138,
+          "playerId": "p137",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 139,
+          "playerId": "p114",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 140,
+          "playerId": "p123",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 141,
+          "playerId": "p143",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 142,
+          "playerId": "p129",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 143,
+          "playerId": "p141",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 144,
+          "playerId": "p173",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 145,
+          "playerId": "p182",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 146,
+          "playerId": "p140",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 147,
+          "playerId": "p144",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 148,
+          "playerId": "p156",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 149,
+          "playerId": "p142",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 150,
+          "playerId": "p147",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 151,
+          "playerId": "p145",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 152,
+          "playerId": "p149",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 153,
+          "playerId": "p184",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 154,
+          "playerId": "p150",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 155,
+          "playerId": "p152",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 156,
+          "playerId": "p198",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 157,
+          "playerId": "p277",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 158,
+          "playerId": "p167",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 159,
+          "playerId": "p183",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 160,
+          "playerId": "p170",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 161,
+          "playerId": "p171",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 162,
+          "playerId": "p172",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 163,
+          "playerId": "p174",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 164,
+          "playerId": "p175",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 165,
+          "playerId": "p176",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 166,
+          "playerId": "p177",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 167,
+          "playerId": "p178",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 168,
+          "playerId": "p148",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 169,
+          "playerId": "p161",
+          "teamNumber": 1,
+          "isMine": false
+        },
+        {
+          "pick": 170,
+          "playerId": "p185",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 171,
+          "playerId": "p186",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 172,
+          "playerId": "p190",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 173,
+          "playerId": "p187",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 174,
+          "playerId": "p188",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 175,
+          "playerId": "p189",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 176,
+          "playerId": "p191",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 177,
+          "playerId": "p200",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 178,
+          "playerId": "p235",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 179,
+          "playerId": "p180",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 180,
+          "playerId": "p162",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 181,
+          "playerId": "p286",
+          "teamNumber": 12,
+          "isMine": false
+        },
+        {
+          "pick": 182,
+          "playerId": "p257",
+          "teamNumber": 11,
+          "isMine": true
+        },
+        {
+          "pick": 183,
+          "playerId": "p236",
+          "teamNumber": 10,
+          "isMine": false
+        },
+        {
+          "pick": 184,
+          "playerId": "p153",
+          "teamNumber": 9,
+          "isMine": false
+        },
+        {
+          "pick": 185,
+          "playerId": "p151",
+          "teamNumber": 8,
+          "isMine": false
+        },
+        {
+          "pick": 186,
+          "playerId": "p155",
+          "teamNumber": 7,
+          "isMine": false
+        },
+        {
+          "pick": 187,
+          "playerId": "p193",
+          "teamNumber": 6,
+          "isMine": false
+        },
+        {
+          "pick": 188,
+          "playerId": "p154",
+          "teamNumber": 5,
+          "isMine": false
+        },
+        {
+          "pick": 189,
+          "playerId": "p197",
+          "teamNumber": 4,
+          "isMine": false
+        },
+        {
+          "pick": 190,
+          "playerId": "p163",
+          "teamNumber": 3,
+          "isMine": false
+        },
+        {
+          "pick": 191,
+          "playerId": "p201",
+          "teamNumber": 2,
+          "isMine": false
+        },
+        {
+          "pick": 192,
+          "playerId": "p158",
+          "teamNumber": 1,
+          "isMine": false
+        }
+      ],
+      "savedAt": "2026-08-28T17:10:11.824Z",
+      "playerDataVersion": "2026-08-28-v1",
+      "playerDataVersionsUsed": [
+        "2026-08-28-v1"
+      ]
+    },
     {
       "id": "mock-1787855393069-8t646u",
       "name": "12 team, pick 11, WR/RB/WR/RB/QB/RB (Amon/Henry)",
@@ -1168,7 +3006,11 @@
           "isMine": false
         }
       ],
-      "savedAt": "2026-08-27T18:29:53.069Z"
+      "savedAt": "2026-08-27T18:29:53.069Z",
+      "playerDataVersion": "2026-08-26-v2",
+      "playerDataVersionsUsed": [
+        "2026-08-26-v2"
+      ]
     },
     {
       "id": "mock-1787853369223-h1mdtq",
@@ -2335,42 +4177,46 @@
           "isMine": false
         }
       ],
-      "savedAt": "2026-08-27T17:56:09.223Z"
+      "savedAt": "2026-08-27T17:56:09.223Z",
+      "playerDataVersion": "2026-08-26-v2",
+      "playerDataVersionsUsed": [
+        "2026-08-26-v2"
+      ]
     }
   ],
   "currentDraft": {
-    "id": "active-1787853599079-w2te6n",
-    "name": "12 team, pick 11, WR/RB/WR/RB/QB/RB (Amon/Henry)",
+    "id": "active-1787938510337-5eyv8d",
+    "name": "12 team, pick 11, RB/RB/RB/WR/TE/QB",
     "leagueId": "12",
     "draftSlot": 11,
-    "modelVersion": "2.5.4",
+    "createdAt": "2026-08-28T17:35:10.337Z",
+    "updatedAt": "2026-08-28T18:07:09.667Z",
+    "modelVersion": "2.5.5",
     "modelVersionsUsed": [
-      "2.5.4"
+      "2.5.5"
     ],
-    "createdAt": "2026-08-27T17:59:59.079Z",
-    "updatedAt": "2026-08-27T18:29:50.806Z",
     "picks": [
       {
         "pick": 1,
-        "playerId": "p001",
+        "playerId": "p002",
         "teamNumber": 1,
         "isMine": false
       },
       {
         "pick": 2,
-        "playerId": "p002",
+        "playerId": "p001",
         "teamNumber": 2,
         "isMine": false
       },
       {
         "pick": 3,
-        "playerId": "p003",
+        "playerId": "p004",
         "teamNumber": 3,
         "isMine": false
       },
       {
         "pick": 4,
-        "playerId": "p012",
+        "playerId": "p005",
         "teamNumber": 4,
         "isMine": false
       },
@@ -2382,43 +4228,43 @@
       },
       {
         "pick": 6,
-        "playerId": "p007",
+        "playerId": "p010",
         "teamNumber": 6,
         "isMine": false
       },
       {
         "pick": 7,
-        "playerId": "p009",
+        "playerId": "p003",
         "teamNumber": 7,
         "isMine": false
       },
       {
         "pick": 8,
-        "playerId": "p004",
+        "playerId": "p008",
         "teamNumber": 8,
         "isMine": false
       },
       {
         "pick": 9,
-        "playerId": "p010",
+        "playerId": "p012",
         "teamNumber": 9,
         "isMine": false
       },
       {
         "pick": 10,
-        "playerId": "p008",
+        "playerId": "p009",
         "teamNumber": 10,
         "isMine": false
       },
       {
         "pick": 11,
-        "playerId": "p005",
+        "playerId": "p007",
         "teamNumber": 11,
         "isMine": true
       },
       {
         "pick": 12,
-        "playerId": "p018",
+        "playerId": "p011",
         "teamNumber": 12,
         "isMine": false
       },
@@ -2436,43 +4282,43 @@
       },
       {
         "pick": 15,
-        "playerId": "p014",
+        "playerId": "p022",
         "teamNumber": 10,
         "isMine": false
       },
       {
         "pick": 16,
-        "playerId": "p011",
+        "playerId": "p018",
         "teamNumber": 9,
         "isMine": false
       },
       {
         "pick": 17,
-        "playerId": "p015",
+        "playerId": "p021",
         "teamNumber": 8,
         "isMine": false
       },
       {
         "pick": 18,
-        "playerId": "p016",
+        "playerId": "p013",
         "teamNumber": 7,
         "isMine": false
       },
       {
         "pick": 19,
-        "playerId": "p021",
+        "playerId": "p028",
         "teamNumber": 6,
         "isMine": false
       },
       {
         "pick": 20,
-        "playerId": "p028",
+        "playerId": "p025",
         "teamNumber": 5,
         "isMine": false
       },
       {
         "pick": 21,
-        "playerId": "p022",
+        "playerId": "p014",
         "teamNumber": 4,
         "isMine": false
       },
@@ -2484,31 +4330,31 @@
       },
       {
         "pick": 23,
-        "playerId": "p013",
+        "playerId": "p015",
         "teamNumber": 2,
         "isMine": false
       },
       {
         "pick": 24,
-        "playerId": "p032",
+        "playerId": "p026",
         "teamNumber": 1,
         "isMine": false
       },
       {
         "pick": 25,
-        "playerId": "p029",
+        "playerId": "p016",
         "teamNumber": 1,
         "isMine": false
       },
       {
         "pick": 26,
-        "playerId": "p025",
+        "playerId": "p036",
         "teamNumber": 2,
         "isMine": false
       },
       {
         "pick": 27,
-        "playerId": "p036",
+        "playerId": "p024",
         "teamNumber": 3,
         "isMine": false
       },
@@ -2520,67 +4366,67 @@
       },
       {
         "pick": 29,
-        "playerId": "p024",
+        "playerId": "p038",
         "teamNumber": 5,
         "isMine": false
       },
       {
         "pick": 30,
-        "playerId": "p026",
+        "playerId": "p023",
         "teamNumber": 6,
         "isMine": false
       },
       {
         "pick": 31,
-        "playerId": "p023",
+        "playerId": "p032",
         "teamNumber": 7,
         "isMine": false
       },
       {
         "pick": 32,
-        "playerId": "p030",
+        "playerId": "p029",
         "teamNumber": 8,
         "isMine": false
       },
       {
         "pick": 33,
-        "playerId": "p027",
+        "playerId": "p035",
         "teamNumber": 9,
         "isMine": false
       },
       {
         "pick": 34,
-        "playerId": "p033",
+        "playerId": "p027",
         "teamNumber": 10,
         "isMine": false
       },
       {
         "pick": 35,
-        "playerId": "p035",
+        "playerId": "p030",
         "teamNumber": 11,
         "isMine": true
       },
       {
         "pick": 36,
-        "playerId": "p034",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 37,
         "playerId": "p044",
         "teamNumber": 12,
         "isMine": false
       },
       {
+        "pick": 37,
+        "playerId": "p039",
+        "teamNumber": 12,
+        "isMine": false
+      },
+      {
         "pick": 38,
-        "playerId": "p038",
+        "playerId": "p034",
         "teamNumber": 11,
         "isMine": true
       },
       {
         "pick": 39,
-        "playerId": "p039",
+        "playerId": "p049",
         "teamNumber": 10,
         "isMine": false
       },
@@ -2592,916 +4438,417 @@
       },
       {
         "pick": 41,
-        "playerId": "p042",
+        "playerId": "p037",
         "teamNumber": 8,
         "isMine": false
       },
       {
         "pick": 42,
-        "playerId": "p041",
+        "playerId": "p060",
         "teamNumber": 7,
         "isMine": false
       },
       {
         "pick": 43,
-        "playerId": "p046",
+        "playerId": "p043",
         "teamNumber": 6,
         "isMine": false
       },
       {
         "pick": 44,
-        "playerId": "p037",
+        "playerId": "p046",
         "teamNumber": 5,
         "isMine": false
       },
       {
         "pick": 45,
-        "playerId": "p045",
+        "playerId": "p033",
         "teamNumber": 4,
         "isMine": false
       },
       {
         "pick": 46,
-        "playerId": "p043",
+        "playerId": "p047",
         "teamNumber": 3,
         "isMine": false
       },
       {
         "pick": 47,
-        "playerId": "p049",
+        "playerId": "p042",
         "teamNumber": 2,
         "isMine": false
       },
       {
         "pick": 48,
-        "playerId": "p060",
+        "playerId": "p041",
         "teamNumber": 1,
         "isMine": false
       },
       {
         "pick": 49,
-        "playerId": "p052",
+        "playerId": "p051",
         "teamNumber": 1,
         "isMine": false
       },
       {
         "pick": 50,
-        "playerId": "p047",
+        "playerId": "p045",
         "teamNumber": 2,
         "isMine": false
       },
       {
         "pick": 51,
-        "playerId": "p050",
+        "playerId": "p056",
         "teamNumber": 3,
         "isMine": false
       },
       {
         "pick": 52,
-        "playerId": "p048",
+        "playerId": "p059",
         "teamNumber": 4,
         "isMine": false
       },
       {
         "pick": 53,
-        "playerId": "p058",
+        "playerId": "p052",
         "teamNumber": 5,
         "isMine": false
       },
       {
         "pick": 54,
-        "playerId": "p053",
+        "playerId": "p061",
         "teamNumber": 6,
         "isMine": false
       },
       {
         "pick": 55,
-        "playerId": "p051",
+        "playerId": "p048",
         "teamNumber": 7,
         "isMine": false
       },
       {
         "pick": 56,
-        "playerId": "p054",
+        "playerId": "p062",
         "teamNumber": 8,
         "isMine": false
       },
       {
         "pick": 57,
-        "playerId": "p055",
+        "playerId": "p053",
         "teamNumber": 9,
         "isMine": false
       },
       {
         "pick": 58,
-        "playerId": "p056",
+        "playerId": "p055",
         "teamNumber": 10,
         "isMine": false
       },
       {
         "pick": 59,
-        "playerId": "p057",
+        "playerId": "p050",
         "teamNumber": 11,
         "isMine": true
       },
       {
         "pick": 60,
-        "playerId": "p066",
+        "playerId": "p054",
         "teamNumber": 12,
         "isMine": false
       },
       {
         "pick": 61,
-        "playerId": "p069",
+        "playerId": "p074",
         "teamNumber": 12,
         "isMine": false
       },
       {
         "pick": 62,
-        "playerId": "p059",
+        "playerId": "p057",
         "teamNumber": 11,
         "isMine": true
       },
       {
         "pick": 63,
-        "playerId": "p061",
+        "playerId": "p067",
         "teamNumber": 10,
         "isMine": false
       },
       {
         "pick": 64,
-        "playerId": "p064",
+        "playerId": "p065",
         "teamNumber": 9,
         "isMine": false
       },
       {
         "pick": 65,
-        "playerId": "p071",
+        "playerId": "p075",
         "teamNumber": 8,
         "isMine": false
       },
       {
         "pick": 66,
-        "playerId": "p072",
+        "playerId": "p058",
         "teamNumber": 7,
         "isMine": false
       },
       {
         "pick": 67,
-        "playerId": "p062",
+        "playerId": "p072",
         "teamNumber": 6,
         "isMine": false
       },
       {
         "pick": 68,
-        "playerId": "p068",
+        "playerId": "p076",
         "teamNumber": 5,
         "isMine": false
       },
       {
         "pick": 69,
-        "playerId": "p073",
+        "playerId": "p071",
         "teamNumber": 4,
         "isMine": false
       },
       {
         "pick": 70,
-        "playerId": "p063",
+        "playerId": "p064",
         "teamNumber": 3,
         "isMine": false
       },
       {
         "pick": 71,
-        "playerId": "p077",
+        "playerId": "p063",
         "teamNumber": 2,
         "isMine": false
       },
       {
         "pick": 72,
-        "playerId": "p075",
+        "playerId": "p068",
         "teamNumber": 1,
         "isMine": false
       },
       {
         "pick": 73,
-        "playerId": "p065",
+        "playerId": "p096",
         "teamNumber": 1,
         "isMine": false
       },
       {
         "pick": 74,
-        "playerId": "p074",
+        "playerId": "p077",
         "teamNumber": 2,
         "isMine": false
       },
       {
         "pick": 75,
-        "playerId": "p070",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 76,
-        "playerId": "p082",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 77,
-        "playerId": "p078",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 78,
-        "playerId": "p083",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 79,
-        "playerId": "p084",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 80,
-        "playerId": "p085",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 81,
-        "playerId": "p067",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 82,
-        "playerId": "p081",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 83,
-        "playerId": "p076",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 84,
-        "playerId": "p086",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 85,
-        "playerId": "p102",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 86,
-        "playerId": "p103",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 87,
-        "playerId": "p104",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 88,
-        "playerId": "p105",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 89,
-        "playerId": "p096",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 90,
-        "playerId": "p079",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 91,
-        "playerId": "p097",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 92,
-        "playerId": "p080",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 93,
-        "playerId": "p088",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 94,
         "playerId": "p098",
         "teamNumber": 3,
         "isMine": false
       },
       {
-        "pick": 95,
-        "playerId": "p087",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 96,
-        "playerId": "p173",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 97,
-        "playerId": "p182",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 98,
-        "playerId": "p090",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 99,
-        "playerId": "p091",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 100,
-        "playerId": "p099",
+        "pick": 76,
+        "playerId": "p083",
         "teamNumber": 4,
         "isMine": false
       },
       {
-        "pick": 101,
-        "playerId": "p093",
+        "pick": 77,
+        "playerId": "p094",
         "teamNumber": 5,
         "isMine": false
       },
       {
-        "pick": 102,
-        "playerId": "p110",
+        "pick": 78,
+        "playerId": "p082",
         "teamNumber": 6,
         "isMine": false
       },
       {
-        "pick": 103,
-        "playerId": "p089",
+        "pick": 79,
+        "playerId": "p073",
         "teamNumber": 7,
         "isMine": false
       },
       {
-        "pick": 104,
-        "playerId": "p094",
+        "pick": 80,
+        "playerId": "p103",
         "teamNumber": 8,
         "isMine": false
       },
       {
-        "pick": 105,
-        "playerId": "p095",
+        "pick": 81,
+        "playerId": "p069",
         "teamNumber": 9,
         "isMine": false
       },
       {
-        "pick": 106,
+        "pick": 82,
         "playerId": "p101",
         "teamNumber": 10,
         "isMine": false
       },
       {
-        "pick": 107,
+        "pick": 83,
+        "playerId": "p079",
+        "teamNumber": 11,
+        "isMine": true
+      },
+      {
+        "pick": 84,
+        "playerId": "p099",
+        "teamNumber": 12,
+        "isMine": false
+      },
+      {
+        "pick": 85,
+        "playerId": "p116",
+        "teamNumber": 12,
+        "isMine": false
+      },
+      {
+        "pick": 86,
+        "playerId": "p097",
+        "teamNumber": 11,
+        "isMine": true
+      },
+      {
+        "pick": 87,
+        "playerId": "p088",
+        "teamNumber": 10,
+        "isMine": false
+      },
+      {
+        "pick": 88,
+        "playerId": "p087",
+        "teamNumber": 9,
+        "isMine": false
+      },
+      {
+        "pick": 89,
+        "playerId": "p066",
+        "teamNumber": 8,
+        "isMine": false
+      },
+      {
+        "pick": 90,
         "playerId": "p100",
+        "teamNumber": 7,
+        "isMine": false
+      },
+      {
+        "pick": 91,
+        "playerId": "p125",
+        "teamNumber": 6,
+        "isMine": false
+      },
+      {
+        "pick": 92,
+        "playerId": "p128",
+        "teamNumber": 5,
+        "isMine": false
+      },
+      {
+        "pick": 93,
+        "playerId": "p091",
+        "teamNumber": 4,
+        "isMine": false
+      },
+      {
+        "pick": 94,
+        "playerId": "p109",
+        "teamNumber": 3,
+        "isMine": false
+      },
+      {
+        "pick": 95,
+        "playerId": "p102",
+        "teamNumber": 2,
+        "isMine": false
+      },
+      {
+        "pick": 96,
+        "playerId": "p095",
+        "teamNumber": 1,
+        "isMine": false
+      },
+      {
+        "pick": 97,
+        "playerId": "p115",
+        "teamNumber": 1,
+        "isMine": false
+      },
+      {
+        "pick": 98,
+        "playerId": "p080",
+        "teamNumber": 2,
+        "isMine": false
+      },
+      {
+        "pick": 99,
+        "playerId": "p081",
+        "teamNumber": 3,
+        "isMine": false
+      },
+      {
+        "pick": 100,
+        "playerId": "p070",
+        "teamNumber": 4,
+        "isMine": false
+      },
+      {
+        "pick": 101,
+        "playerId": "p123",
+        "teamNumber": 5,
+        "isMine": false
+      },
+      {
+        "pick": 102,
+        "playerId": "p181",
+        "teamNumber": 6,
+        "isMine": false
+      },
+      {
+        "pick": 103,
+        "playerId": "p078",
+        "teamNumber": 7,
+        "isMine": false
+      },
+      {
+        "pick": 104,
+        "playerId": "p089",
+        "teamNumber": 8,
+        "isMine": false
+      },
+      {
+        "pick": 105,
+        "playerId": "p105",
+        "teamNumber": 9,
+        "isMine": false
+      },
+      {
+        "pick": 106,
+        "playerId": "p107",
+        "teamNumber": 10,
+        "isMine": false
+      },
+      {
+        "pick": 107,
+        "playerId": "p108",
         "teamNumber": 11,
         "isMine": true
       },
       {
         "pick": 108,
-        "playerId": "p108",
+        "playerId": "p110",
         "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 109,
-        "playerId": "p106",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 110,
-        "playerId": "p126",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 111,
-        "playerId": "p092",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 112,
-        "playerId": "p109",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 113,
-        "playerId": "p107",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 114,
-        "playerId": "p111",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 115,
-        "playerId": "p118",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 116,
-        "playerId": "p113",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 117,
-        "playerId": "p114",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 118,
-        "playerId": "p116",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 119,
-        "playerId": "p112",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 120,
-        "playerId": "p117",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 121,
-        "playerId": "p123",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 122,
-        "playerId": "p121",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 123,
-        "playerId": "p119",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 124,
-        "playerId": "p120",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 125,
-        "playerId": "p124",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 126,
-        "playerId": "p130",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 127,
-        "playerId": "p115",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 128,
-        "playerId": "p125",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 129,
-        "playerId": "p127",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 130,
-        "playerId": "p135",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 131,
-        "playerId": "p122",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 132,
-        "playerId": "p128",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 133,
-        "playerId": "p134",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 134,
-        "playerId": "p140",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 135,
-        "playerId": "p131",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 136,
-        "playerId": "p132",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 137,
-        "playerId": "p129",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 138,
-        "playerId": "p133",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 139,
-        "playerId": "p137",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 140,
-        "playerId": "p138",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 141,
-        "playerId": "p136",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 142,
-        "playerId": "p139",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 143,
-        "playerId": "p141",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 144,
-        "playerId": "p143",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 145,
-        "playerId": "p284",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 146,
-        "playerId": "p144",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 147,
-        "playerId": "p142",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 148,
-        "playerId": "p146",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 149,
-        "playerId": "p145",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 150,
-        "playerId": "p147",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 151,
-        "playerId": "p155",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 152,
-        "playerId": "p160",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 153,
-        "playerId": "p148",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 154,
-        "playerId": "p150",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 155,
-        "playerId": "p152",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 156,
-        "playerId": "p169",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 157,
-        "playerId": "p181",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 158,
-        "playerId": "p170",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 159,
-        "playerId": "p171",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 160,
-        "playerId": "p172",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 161,
-        "playerId": "p174",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 162,
-        "playerId": "p175",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 163,
-        "playerId": "p176",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 164,
-        "playerId": "p177",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 165,
-        "playerId": "p178",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 166,
-        "playerId": "p179",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 167,
-        "playerId": "p180",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 168,
-        "playerId": "p198",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 169,
-        "playerId": "p277",
-        "teamNumber": 1,
-        "isMine": false
-      },
-      {
-        "pick": 170,
-        "playerId": "p183",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 171,
-        "playerId": "p184",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 172,
-        "playerId": "p185",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 173,
-        "playerId": "p186",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 174,
-        "playerId": "p187",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 175,
-        "playerId": "p188",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 176,
-        "playerId": "p189",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 177,
-        "playerId": "p190",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 178,
-        "playerId": "p191",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 179,
-        "playerId": "p153",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 180,
-        "playerId": "p157",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 181,
-        "playerId": "p149",
-        "teamNumber": 12,
-        "isMine": false
-      },
-      {
-        "pick": 182,
-        "playerId": "p192",
-        "teamNumber": 11,
-        "isMine": true
-      },
-      {
-        "pick": 183,
-        "playerId": "p151",
-        "teamNumber": 10,
-        "isMine": false
-      },
-      {
-        "pick": 184,
-        "playerId": "p156",
-        "teamNumber": 9,
-        "isMine": false
-      },
-      {
-        "pick": 185,
-        "playerId": "p162",
-        "teamNumber": 8,
-        "isMine": false
-      },
-      {
-        "pick": 186,
-        "playerId": "p158",
-        "teamNumber": 7,
-        "isMine": false
-      },
-      {
-        "pick": 187,
-        "playerId": "p154",
-        "teamNumber": 6,
-        "isMine": false
-      },
-      {
-        "pick": 188,
-        "playerId": "p159",
-        "teamNumber": 5,
-        "isMine": false
-      },
-      {
-        "pick": 189,
-        "playerId": "p165",
-        "teamNumber": 4,
-        "isMine": false
-      },
-      {
-        "pick": 190,
-        "playerId": "p163",
-        "teamNumber": 3,
-        "isMine": false
-      },
-      {
-        "pick": 191,
-        "playerId": "p161",
-        "teamNumber": 2,
-        "isMine": false
-      },
-      {
-        "pick": 192,
-        "playerId": "p361",
-        "teamNumber": 1,
         "isMine": false
       }
+    ],
+    "playerDataVersion": "2026-08-28-v1",
+    "playerDataVersionsUsed": [
+      "2026-08-28-v1"
     ]
-  }
+  },
+  "exportedWithPlayerDataVersion": "2026-08-28-v1"
 }

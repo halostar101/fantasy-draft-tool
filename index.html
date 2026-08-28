@@ -10,7 +10,7 @@
 <body>
   <header class="site-header">
     <div>
-      <p class="eyebrow">2026 • ESPN • Half PPR • v2.5.5</p>
+      <p class="eyebrow">2026 • ESPN • Half PPR • v2.6.0</p>
       <h1>Fantasy Draft Companion</h1>
       <p class="subhead">Live draft board, current player value, availability planning, two-pick context, four-pick Monte Carlo outlook, and mock comparison.</p>
     </div>
@@ -220,7 +220,7 @@
         </section>
 
         <section class="panel">
-          <h3>V2.5.5 methodology</h3>
+          <h3>V2.6.0 methodology</h3>
           <ul class="method-list">
             <li><strong>VOLS:</strong> projected points above the modeled last starter at that position after league-wide FLEX demand is allocated.</li>
             <li><strong>VORP:</strong> projected points above the deeper waiver/replacement line after modeled benches are filled.</li>
@@ -229,9 +229,11 @@
             <li><strong>Current value:</strong> the Draft Board is ordered by player value if available now. It does not discount a player just because he is unlikely to reach your draft slot.</li>
             <li><strong>Priority targets:</strong> before your turn, the cards above the board combine current model value, estimated chance of reaching your upcoming pick, roster relevance, and multi-turn positional urgency. This is intentionally separate from the player ranking.</li>
             <li><strong>On-clock two-pick lookahead:</strong> once it is actually your turn, recommendation cards compare the real available choices plus the expected value likely to survive to your following pick. The second-pick helper now obeys the same roster rules as the longer simulation, so it will not suggest K/DST while offensive starters remain open or direct-to-bench RB/WR picks while core skill slots are incomplete.</li>
-            <li><strong>Adaptive four-pick Monte Carlo:</strong> every serious on-clock candidate is screened on the same 64 deterministic rank-driven paths. The strongest and strategically protected finalists are extended to 256 total paths. “Common player path” is only the most frequent exact path, so it can differ from the average score shown on the badge. Candidates within 0.5% of the best average form one top group; inside that group, tiny Monte Carlo point differences no longer determine order. The tie-break uses the expected tier-aware cost of postponing that position until your next turn first, then urgency.</li>
+            <li><strong>Adaptive four-pick Monte Carlo:</strong> every serious on-clock candidate is screened on the same 64 deterministic paths and finalists extend to 256. Opponent picks now use a mostly-consensus distribution plus an explicit reach mode that widens by round, a bounded roster-needs modifier, and a gentle live-room adjustment based on how chalky or reach-heavy the actual room has been compared with the model's round-specific baseline. “Common player path” is only the most frequent exact path, so it can differ from the average score shown on the badge. Candidates within 0.5% of the best average form one top group; inside that group, tiny Monte Carlo point differences no longer determine order.</li>
             <li><strong>Multi-turn positional depth:</strong> the tool also forecasts the best same-position projection likely to remain across your next four turns. Flat tiers reduce urgency even when the four-pick horizon ends sooner; this is designed to recognize situations such as waiting on a deep TE or QB tier.</li>
-            <li><strong>Deferred QB/TE value:</strong> if QB or TE remains open at the Monte Carlo horizon, the terminal score estimates the production likely to remain at your next turn rather than assuming the slot is zero or forcing it to be filled immediately. Useful RB/WR bench depth receives a small residual VORP credit only after core RB/WR/FLEX starting capacity is filled.</li>
+            <li><strong>Deferred QB/TE value:</strong> if QB or TE remains open at the Monte Carlo horizon, the terminal score estimates the production likely to remain at your next turn rather than assuming the slot is zero or forcing it to be filled immediately. Useful RB/WR bench depth receives a small residual VORP credit only after core RB/WR/FLEX starting capacity is filled, with diminishing value for repeated depth at the same position.</li>
+            <li><strong>RB/WR depth balance:</strong> once a candidate would be bench depth rather than a starter, the first useful backup carries more value than the fourth or fifth player at the same position. A small coverage adjustment favors the thinner side of RB/WR construction without imposing a hard quota, so an exceptional falling player can still win.</li>
+            <li><strong>Opponent roster needs:</strong> simulated QB/TE demand rises when a team remains unfilled deeper into the draft and falls sharply once the position is covered. RB/WR imbalance also nudges the model toward the thinner side. These are bounded probability modifiers, not deterministic roster rules.</li>
             <li><strong>K/DST reliability:</strong> raw ESPN projection, VOLS, and VORP stay untouched, but Model Value applies a heuristic reliability discount (30% D/ST, 40% K) because preseason separation at those positions is less dependable and the positions are easier to replace/stream. Decision Support still defers them while offensive starters are incomplete.</li>
             <li><strong>Consistent lookahead:</strong> before your turn, second-pick candidates must survive from the current board all the way to your following pick; the model no longer assumes an elite player magically survives to your first pick and then reappears as the likely next selection.</li>
             <li><strong>Simulation scope:</strong> simulations run automatically in your browser; there is no button to press and no manual mock-draft repetition required. Future simulated user picks use a lighter one-turn evaluator for speed, while the full multi-turn depth model remains active for the real decision and horizon scoring. The simulations are directional rather than calibrated forecasts because the source contains ESPN rank but not historical ADP distributions.</li>
@@ -247,6 +249,6 @@
     <span id="saveIndicator" aria-live="polite">Ready</span>
   </footer>
 
-  <script src="./app.js?v=2.5.5" defer></script>
+  <script src="./app.js?v=2.6.0" defer></script>
 </body>
 </html>
