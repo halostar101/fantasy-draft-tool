@@ -253,7 +253,7 @@
     const overlay = document.createElement('div');
     overlay.id = 'fantasy-draft-companion-sync-overlay';
     Object.assign(overlay.style, {
-      position: 'fixed', right: '14px', bottom: '14px', zIndex: '2147483647',
+      position: 'fixed', left: '14px', bottom: '14px', zIndex: '2147483647',
       width: '270px', padding: '11px 12px', borderRadius: '10px',
       background: '#111827', color: '#f9fafb', boxShadow: '0 8px 28px rgba(0,0,0,.28)',
       font: '12px/1.35 system-ui,-apple-system,Segoe UI,sans-serif'

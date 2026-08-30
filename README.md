@@ -45,6 +45,8 @@ No backend, MySQL, Node server, or account system is required.
 
 ## v2.7.0 ESPN Live Sync
 
+- The small ESPN-side sync status overlay is anchored to the **bottom-left** of the ESPN draft room so it does not cover the newest entries in ESPN's right-side Picks feed.
+
 - Added optional **automatic ESPN pick tracking** for Chrome without a browser extension. The app generates an `ESPN Draft Sync` bookmarklet dynamically from its own GitHub Pages URL.
 - The bookmarklet reads ESPN's rendered **Picks** sidebar using the stable semantic classes visible in the draft room (`pick-message__container`, `playerinfo__playername`, `playerinfo__playerteam`, `playerinfo__playerpos`, and `pick-info`). It intentionally ignores ESPN's generated `jsx-*` class names.
 - The ESPN-side scraper sends the **complete visible DOM history**, not just the newest mutation. The app reconciles that full history against its current draft so a missed DOM event or delayed tab does not permanently lose a pick.
