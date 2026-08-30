@@ -10,7 +10,7 @@
 <body>
   <header class="site-header">
     <div>
-      <p class="eyebrow">2026 • ESPN • Half PPR • v2.6.0</p>
+      <p class="eyebrow">2026 • ESPN • Half PPR • v2.7.0</p>
       <h1>Fantasy Draft Companion</h1>
       <p class="subhead">Live draft board, current player value, availability planning, two-pick context, four-pick Monte Carlo outlook, and mock comparison.</p>
     </div>
@@ -45,6 +45,26 @@
           <input id="draftName" type="text" maxlength="80" placeholder="e.g. 12-team mock — slot 6">
         </label>
         <button id="saveSnapshotBtn" class="button" type="button">Save mock snapshot</button>
+      </section>
+
+      <section class="live-sync-panel panel" aria-labelledby="liveSyncHeading">
+        <div class="live-sync-main">
+          <div>
+            <p class="eyebrow">ESPN live sync • optional</p>
+            <div class="live-sync-title-row">
+              <h2 id="liveSyncHeading">Automatic pick tracking</h2>
+              <span id="liveSyncBadge" class="live-sync-badge idle"><span class="live-sync-dot"></span>Not connected</span>
+            </div>
+            <p id="liveSyncDetail" class="live-sync-detail">Drag the ESPN Draft Sync link to Chrome's bookmarks bar, then click that bookmark from inside the ESPN draft room.</p>
+            <p id="liveSyncIssue" class="live-sync-issue" aria-live="polite"></p>
+          </div>
+          <div class="live-sync-actions">
+            <a id="espnBookmarkletLink" class="button live-sync-bookmark" href="#" title="Drag this link to Chrome's bookmarks bar">ESPN Draft Sync</a>
+            <button id="liveSyncPauseBtn" class="button secondary" type="button" disabled>Pause sync</button>
+            <button id="liveSyncResyncBtn" class="button secondary" type="button" disabled>Replace from ESPN</button>
+          </div>
+        </div>
+        <p class="footnote live-sync-help">Chrome: press <strong>Ctrl+Shift+B</strong> if the bookmarks bar is hidden, then drag <strong>ESPN Draft Sync</strong> onto it. In ESPN, click that bookmark once. It opens/focuses a companion tab and streams the complete Picks sidebar history; no extension, ESPN password, or backend is required.</p>
       </section>
 
       <section class="draft-status-grid">
@@ -220,7 +240,7 @@
         </section>
 
         <section class="panel">
-          <h3>V2.6.0 methodology</h3>
+          <h3>V2.7.0 methodology</h3>
           <ul class="method-list">
             <li><strong>VOLS:</strong> projected points above the modeled last starter at that position after league-wide FLEX demand is allocated.</li>
             <li><strong>VORP:</strong> projected points above the deeper waiver/replacement line after modeled benches are filled.</li>
@@ -237,6 +257,7 @@
             <li><strong>K/DST reliability:</strong> raw ESPN projection, VOLS, and VORP stay untouched, but Model Value applies a heuristic reliability discount (30% D/ST, 40% K) because preseason separation at those positions is less dependable and the positions are easier to replace/stream. Decision Support still defers them while offensive starters are incomplete.</li>
             <li><strong>Consistent lookahead:</strong> before your turn, second-pick candidates must survive from the current board all the way to your following pick; the model no longer assumes an elite player magically survives to your first pick and then reappears as the likely next selection.</li>
             <li><strong>Simulation scope:</strong> simulations run automatically in your browser; there is no button to press and no manual mock-draft repetition required. Future simulated user picks use a lighter one-turn evaluator for speed, while the full multi-turn depth model remains active for the real decision and horizon scoring. The simulations are directional rather than calibrated forecasts because the source contains ESPN rank but not historical ADP distributions.</li>
+            <li><strong>ESPN Live Sync:</strong> an optional Chrome bookmarklet reads ESPN's rendered Picks sidebar and sends a compact pick-history payload directly to the companion tab with <code>postMessage</code>. The app reconciles the full history rather than blindly appending DOM events, stops on unresolved/conflicting picks instead of guessing, and keeps the existing manual controls as a fallback. The bookmarklet does not read or transmit ESPN credentials.</li>
             <li><strong>Wait / Gone:</strong> Draft Board Gone remains player-specific: it is the estimated chance that exact player disappears before the relevant pick. Draft Board Wait remains the lighter one-turn same-position comparison. Decision Support separately computes a tier-aware position cost of waiting that considers the expected best same-position option still available next turn, so several comparable WRs can reduce WR urgency without changing Davante Adams' own Gone %. Position depth extends the timing view across several turns. These are still heuristics because the source does not include ADP distributions.</li>
           </ul>
         </section>
@@ -249,6 +270,6 @@
     <span id="saveIndicator" aria-live="polite">Ready</span>
   </footer>
 
-  <script src="./app.js?v=2.6.0" defer></script>
+  <script src="./app.js?v=2.7.0" defer></script>
 </body>
 </html>

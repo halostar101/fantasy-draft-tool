@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.6.0
+# Fantasy Draft Companion (2026) — v2.7.0
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -10,6 +10,7 @@ No backend, MySQL, Node server, or account system is required.
 ## What it does
 
 - Tracks every pick in a snake draft and recognizes your draft slot.
+- Optionally tracks ESPN draft-room picks automatically through a Chrome bookmarklet; no browser extension or backend is required.
 - Shows ESPN rank, projection, VOLS, VORP, same-position wait cost, tier, and directional availability.
 - Keeps the **Draft Board** ordered by current player value if the player is available now.
 - Before your turn, shows a separate **Priority Targets** list that combines roster relevance, chance of reaching your upcoming pick, and multi-turn positional urgency.
@@ -41,6 +42,29 @@ No backend, MySQL, Node server, or account system is required.
 
 
 
+
+## v2.7.0 ESPN Live Sync
+
+- Added optional **automatic ESPN pick tracking** for Chrome without a browser extension. The app generates an `ESPN Draft Sync` bookmarklet dynamically from its own GitHub Pages URL.
+- The bookmarklet reads ESPN's rendered **Picks** sidebar using the stable semantic classes visible in the draft room (`pick-message__container`, `playerinfo__playername`, `playerinfo__playerteam`, `playerinfo__playerpos`, and `pick-info`). It intentionally ignores ESPN's generated `jsx-*` class names.
+- The ESPN-side scraper sends the **complete visible DOM history**, not just the newest mutation. The app reconciles that full history against its current draft so a missed DOM event or delayed tab does not permanently lose a pick.
+- Synced picks are matched to the local player dataset by normalized player identity plus position/team narrowing. The app stops at an unresolved name or conflicting pick instead of silently guessing.
+- Pick ownership is calculated from the configured league size, snake order, and draft slot. Your ESPN selections therefore arrive in the app with `isMine: true` automatically.
+- A compact status panel shows ESPN/app pick counts, stale/reconnect state, pause/resume controls, and an explicit **Replace from ESPN** recovery action for correcting a manually diverged local history.
+- Communication is browser-to-browser-tab only through `postMessage`. The bookmarklet does not read ESPN cookies, passwords, or authentication headers, and no server/database was added.
+- The app continues to support fully manual drafting. Refreshing or navigating the ESPN draft page stops the injected scraper; click the bookmark again to reconnect.
+- **No valuation, Gone, Monte Carlo, roster-needs, or opponent-variance math changed from v2.6.0.**
+
+### Chrome setup
+
+1. Deploy/open the companion app on GitHub Pages.
+2. Press **Ctrl+Shift+B** if Chrome's bookmarks bar is hidden.
+3. Drag the **ESPN Draft Sync** link from the Draft Room into the bookmarks bar.
+4. Open the ESPN fantasy draft room.
+5. Click the saved **ESPN Draft Sync** bookmark once. The script opens/focuses a companion tab and begins sending the ESPN Picks history.
+6. Confirm the app status says **Connected** and that the ESPN/app pick counts match.
+
+If ESPN is refreshed or the injected status box says the companion tab was closed, click the bookmark again. Use **Pause sync** before intentionally making manual corrections; use **Replace from ESPN** only when you explicitly want ESPN's current history to replace the active app history.
 
 ## v2.6.0 four-mock calibration update
 
@@ -164,7 +188,7 @@ After extracting/overwriting the changed files:
 ```bash
 git status
 git add .
-git commit -m "Calibrate opponent simulation and roster depth"
+git commit -m "Add ESPN live draft sync"
 git push
 ```
 

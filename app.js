@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '2.6.0';
+  const APP_VERSION = '2.7.0';
 
   const STORAGE = {
     current: 'fantasy-draft-tool:v1:currentDraft',
@@ -67,6 +67,8 @@
   let tiers = {};
   let recommendationCache = { key: null, recs: [] };
   let simulationCache = { key: null, results: new Map() };
+  let liveSyncNameIndex = new Map();
+  let liveSyncBaseNameIndex = new Map();
 
   const state = {
     currentDraft: null,
@@ -75,6 +77,22 @@
     search: '',
     sort: 'value'
   };
+
+  const liveSync = {
+    paused: false,
+    lastMessageAt: 0,
+    lastPayload: null,
+    lastMappedHistory: [],
+    unresolved: [],
+    conflict: null,
+    error: '',
+    sourceOrigin: '',
+    lastAppliedCount: 0
+  };
+
+  const LIVE_SYNC_MESSAGE = 'fantasyDraftCompanion:espnSync';
+  const LIVE_SYNC_ACK = 'fantasyDraftCompanion:espnSyncAck';
+  const LIVE_SYNC_PROTOCOL = 1;
 
   const $ = (id) => document.getElementById(id);
 
@@ -90,7 +108,9 @@
     draftHistory: $('draftHistory'), dataStamp: $('dataStamp'), savedMocksList: $('savedMocksList'),
     mockComparison: $('mockComparison'), datasetInfo: $('datasetInfo'), replacementLevels: $('replacementLevels'),
     exportBackupBtn: $('exportBackupBtn'), importBackupInput: $('importBackupInput'), reloadRepoBackupBtn: $('reloadRepoBackupBtn'),
-    backupStatus: $('backupStatus'), saveIndicator: $('saveIndicator')
+    backupStatus: $('backupStatus'), saveIndicator: $('saveIndicator'),
+    espnBookmarkletLink: $('espnBookmarkletLink'), liveSyncPauseBtn: $('liveSyncPauseBtn'), liveSyncResyncBtn: $('liveSyncResyncBtn'),
+    liveSyncBadge: $('liveSyncBadge'), liveSyncDetail: $('liveSyncDetail'), liveSyncIssue: $('liveSyncIssue')
   };
 
   function uid(prefix = 'draft') {
@@ -203,6 +223,433 @@
     const round = Math.floor((overall - 1) / config.teams) + 1;
     const inRound = ((overall - 1) % config.teams) + 1;
     return round % 2 === 1 ? inRound : config.teams - inRound + 1;
+  }
+
+  function espnDraftSyncBookmarklet(targetUrl) {
+    if (location.hostname !== 'fantasy.espn.com') {
+      alert('Open the ESPN fantasy football draft room, then click this bookmark again.');
+      return;
+    }
+
+    const syncKey = '__fantasyDraftCompanionLiveSync';
+    if (window[syncKey]?.stop) window[syncKey].stop();
+
+    const targetOrigin = new URL(targetUrl).origin;
+    const receiver = window.open(targetUrl, 'fantasyDraftCompanionLiveSync');
+    if (!receiver) {
+      alert('Chrome blocked the companion tab. Allow this one popup, then click the ESPN Draft Sync bookmark again.');
+      return;
+    }
+
+    let stopped = false;
+    let lastSignature = '';
+    let sendTimer = null;
+    let observer = null;
+    let interval = null;
+    let lastAckAt = 0;
+
+    const oldOverlay = document.getElementById('fantasy-draft-companion-sync-overlay');
+    if (oldOverlay) oldOverlay.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'fantasy-draft-companion-sync-overlay';
+    Object.assign(overlay.style, {
+      position: 'fixed', right: '14px', bottom: '14px', zIndex: '2147483647',
+      width: '270px', padding: '11px 12px', borderRadius: '10px',
+      background: '#111827', color: '#f9fafb', boxShadow: '0 8px 28px rgba(0,0,0,.28)',
+      font: '12px/1.35 system-ui,-apple-system,Segoe UI,sans-serif'
+    });
+    const title = document.createElement('div');
+    title.textContent = 'Fantasy Draft Companion';
+    title.style.fontWeight = '800';
+    const detail = document.createElement('div');
+    detail.textContent = 'Starting ESPN sync…';
+    detail.style.marginTop = '4px';
+    detail.style.color = '#d1d5db';
+    const stopButton = document.createElement('button');
+    stopButton.type = 'button';
+    stopButton.textContent = 'Stop';
+    Object.assign(stopButton.style, {
+      marginTop: '8px', border: '1px solid #4b5563', borderRadius: '6px',
+      background: '#1f2937', color: '#fff', padding: '4px 8px', cursor: 'pointer'
+    });
+    overlay.append(title, detail, stopButton);
+    document.body.appendChild(overlay);
+
+    function scrapePicks() {
+      return Array.from(document.querySelectorAll('.pick-message__container')).map(node => {
+        const name = node.querySelector('.playerinfo__playername')?.textContent?.trim() || '';
+        const nflTeam = node.querySelector('.playerinfo__playerteam')?.textContent?.trim() || '';
+        const position = node.querySelector('.playerinfo__playerpos')?.textContent?.trim() || '';
+        const pickInfo = node.querySelector('.pick-info');
+        const pickText = pickInfo?.textContent || '';
+        const match = pickText.match(/R\s*(\d+)\s*,\s*P\s*(\d+)/i);
+        const fantasyTeam = pickInfo?.querySelector('span')?.textContent?.replace(/^\s*-\s*/, '').trim() || '';
+        const imageSrc = node.querySelector('.player-headshot img[src*="/players/full/"]')?.getAttribute('src') || '';
+        const espnId = imageSrc.match(/\/players\/full\/(\d+)/)?.[1] || '';
+        if (!name || !match) return null;
+        return {
+          round: Number(match[1]),
+          roundPick: Number(match[2]),
+          player: name,
+          nflTeam,
+          position,
+          fantasyTeam,
+          espnPlayerId: espnId
+        };
+      }).filter(Boolean).sort((a,b) => a.round - b.round || a.roundPick - b.roundPick);
+    }
+
+    function send(force = false) {
+      if (stopped) return;
+      if (receiver.closed) {
+        detail.textContent = 'Companion tab closed — click the bookmark again to reconnect.';
+        return;
+      }
+      const picks = scrapePicks();
+      const signature = JSON.stringify(picks.map(p => [p.round,p.roundPick,p.player,p.nflTeam,p.position]));
+      if (!force && signature === lastSignature) return;
+      lastSignature = signature;
+      const firstRound = picks.filter(p => p.round === 1);
+      const leagueSizeHint = picks.some(p => p.round > 1) && firstRound.length
+        ? Math.max(...firstRound.map(p => p.roundPick))
+        : null;
+      receiver.postMessage({
+        type: 'fantasyDraftCompanion:espnSync',
+        protocol: 1,
+        sentAt: new Date().toISOString(),
+        pageUrl: location.href,
+        leagueSizeHint,
+        picks
+      }, targetOrigin);
+      if (!lastAckAt || Date.now() - lastAckAt > 5000) detail.textContent = `Sending ${picks.length} picks… waiting for companion acknowledgment.`;
+    }
+
+    function scheduleSend() {
+      clearTimeout(sendTimer);
+      sendTimer = setTimeout(() => send(false), 120);
+    }
+
+    function onMessage(event) {
+      if (event.origin !== targetOrigin || event.source !== receiver) return;
+      if (event.data?.type !== 'fantasyDraftCompanion:espnSyncAck') return;
+      lastAckAt = Date.now();
+      const status = event.data.status || 'connected';
+      const appPicks = Number.isFinite(event.data.appPicks) ? event.data.appPicks : '?';
+      const espnPicks = Number.isFinite(event.data.espnPicks) ? event.data.espnPicks : '?';
+      detail.textContent = `${status} • ESPN ${espnPicks} picks • App ${appPicks} picks`;
+    }
+
+    function stop() {
+      stopped = true;
+      clearTimeout(sendTimer);
+      if (observer) observer.disconnect();
+      if (interval) clearInterval(interval);
+      window.removeEventListener('message', onMessage);
+      overlay.remove();
+      if (window[syncKey]?.stop === stop) delete window[syncKey];
+    }
+
+    stopButton.addEventListener('click', stop);
+    window.addEventListener('message', onMessage);
+    observer = new MutationObserver(scheduleSend);
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    interval = setInterval(() => send(true), 2500);
+    window[syncKey] = { stop, send };
+    send(true);
+  }
+
+  function setupEspnBookmarklet() {
+    if (!els.espnBookmarkletLink) return;
+    const targetUrl = `${window.location.origin}${window.location.pathname}`;
+    const code = `(${espnDraftSyncBookmarklet.toString()})(${JSON.stringify(targetUrl)});`;
+    els.espnBookmarkletLink.setAttribute('href', `javascript:${code}`);
+  }
+
+  function normalizeSyncName(value) {
+    return String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[’‘]/g, "'")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '');
+  }
+
+  function normalizeSyncBaseName(value) {
+    return String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[’‘]/g, "'")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+(jr|sr|ii|iii|iv|v)$/i, '')
+      .replace(/\s+/g, '');
+  }
+
+  function normalizeSyncPosition(value) {
+    const pos = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+    return pos === 'DST' ? 'D/ST' : pos;
+  }
+
+  function buildLiveSyncPlayerIndexes() {
+    liveSyncNameIndex = new Map();
+    liveSyncBaseNameIndex = new Map();
+    players.forEach(player => {
+      const exact = normalizeSyncName(player.name);
+      const base = normalizeSyncBaseName(player.name);
+      if (!liveSyncNameIndex.has(exact)) liveSyncNameIndex.set(exact, []);
+      liveSyncNameIndex.get(exact).push(player);
+      if (!liveSyncBaseNameIndex.has(base)) liveSyncBaseNameIndex.set(base, []);
+      liveSyncBaseNameIndex.get(base).push(player);
+    });
+  }
+
+  function narrowLiveSyncCandidates(candidates, synced) {
+    if (!candidates.length) return [];
+    const pos = normalizeSyncPosition(synced.position);
+    const team = String(synced.nflTeam || '').trim().toUpperCase();
+    let narrowed = candidates.slice();
+    if (pos) {
+      const byPos = narrowed.filter(player => normalizeSyncPosition(player.position) === pos);
+      if (byPos.length) narrowed = byPos;
+    }
+    if (team) {
+      const byTeam = narrowed.filter(player => String(player.team || '').trim().toUpperCase() === team);
+      if (byTeam.length) narrowed = byTeam;
+    }
+    return narrowed;
+  }
+
+  function matchLiveSyncPlayer(synced) {
+    const exact = narrowLiveSyncCandidates(liveSyncNameIndex.get(normalizeSyncName(synced.player)) || [], synced);
+    if (exact.length === 1) return { player: exact[0], method: 'name' };
+    if (exact.length > 1) return { player: null, reason: `Ambiguous player name: ${synced.player}` };
+
+    const base = narrowLiveSyncCandidates(liveSyncBaseNameIndex.get(normalizeSyncBaseName(synced.player)) || [], synced);
+    if (base.length === 1) return { player: base[0], method: 'name-suffix-alias' };
+    if (base.length > 1) return { player: null, reason: `Ambiguous player alias: ${synced.player}` };
+    return { player: null, reason: `No player-data match for ${synced.player} / ${synced.nflTeam || '?'} ${synced.position || '?'}` };
+  }
+
+  function allowedEspnSyncOrigin(origin) {
+    try {
+      const url = new URL(origin);
+      return url.protocol === 'https:' && url.hostname === 'fantasy.espn.com';
+    } catch {
+      return false;
+    }
+  }
+
+  function mapEspnSyncPayload(payload) {
+    const draft = state.currentDraft;
+    const config = configFor(draft);
+    const result = { history: [], unresolved: [], error: '' };
+    if (!payload || !Array.isArray(payload.picks)) {
+      result.error = 'ESPN sync payload did not contain a pick list.';
+      return result;
+    }
+    if (payload.leagueSizeHint && Number(payload.leagueSizeHint) !== config.teams) {
+      result.error = `ESPN room appears to have ${payload.leagueSizeHint} teams, but the app is set to ${config.teams}.`;
+      return result;
+    }
+
+    const byOverall = new Map();
+    for (const synced of payload.picks) {
+      const round = Number(synced.round);
+      const roundPick = Number(synced.roundPick);
+      if (!Number.isInteger(round) || round < 1 || !Number.isInteger(roundPick) || roundPick < 1) continue;
+      if (roundPick > config.teams) {
+        result.error = `ESPN reported R${round}, P${roundPick}, which does not fit the app's ${config.teams}-team setting.`;
+        return result;
+      }
+      const overall = (round - 1) * config.teams + roundPick;
+      if (overall > totalPicks(config)) continue;
+      const match = matchLiveSyncPlayer(synced);
+      const record = { overall, synced, match };
+      if (byOverall.has(overall) && byOverall.get(overall).synced.player !== synced.player) {
+        result.error = `ESPN sync reported two different players for pick ${overall}.`;
+        return result;
+      }
+      byOverall.set(overall, record);
+    }
+
+    const highest = byOverall.size ? Math.max(...byOverall.keys()) : 0;
+    for (let overall = 1; overall <= highest; overall += 1) {
+      const record = byOverall.get(overall);
+      if (!record) {
+        result.unresolved.push({ pick: overall, message: `ESPN history has a gap at overall pick ${overall}.` });
+        break;
+      }
+      if (!record.match.player) {
+        result.unresolved.push({ pick: overall, message: record.match.reason || `Could not match pick ${overall}.` });
+        break;
+      }
+      const owner = teamAtPick(overall, config);
+      result.history.push({
+        pick: overall,
+        playerId: record.match.player.id,
+        teamNumber: owner,
+        isMine: owner === draft.draftSlot,
+        source: 'espn-live',
+        espn: {
+          playerName: record.synced.player,
+          nflTeam: record.synced.nflTeam || '',
+          position: record.synced.position || '',
+          fantasyTeam: record.synced.fantasyTeam || '',
+          athleteId: record.synced.espnPlayerId || ''
+        }
+      });
+    }
+    return result;
+  }
+
+  function findLiveSyncConflict(mappedHistory) {
+    const draftPicks = state.currentDraft?.picks || [];
+    const common = Math.min(draftPicks.length, mappedHistory.length);
+    for (let i = 0; i < common; i += 1) {
+      const local = draftPicks[i];
+      const espn = mappedHistory[i];
+      if (Number(local.pick) !== Number(espn.pick) || local.playerId !== espn.playerId) {
+        const localPlayer = playerMap.get(local.playerId)?.name || local.playerId;
+        const espnPlayer = playerMap.get(espn.playerId)?.name || espn.playerId;
+        return { pick: i + 1, message: `Pick ${i + 1} differs: app has ${localPlayer}; ESPN has ${espnPlayer}.` };
+      }
+    }
+    return null;
+  }
+
+  function reconcileEspnSyncPayload(payload, { apply = true } = {}) {
+    const mapped = mapEspnSyncPayload(payload);
+    liveSync.lastMappedHistory = mapped.history;
+    liveSync.unresolved = mapped.unresolved;
+    liveSync.error = mapped.error;
+    liveSync.conflict = mapped.error ? null : findLiveSyncConflict(mapped.history);
+
+    if (!apply || mapped.error || liveSync.conflict) return false;
+    const draft = state.currentDraft;
+    if (mapped.history.length <= draft.picks.length) return false;
+
+    const additions = mapped.history.slice(draft.picks.length);
+    if (!additions.length) return false;
+    recordDraftProvenance(draft);
+    draft.picks.push(...additions);
+    draft.updatedAt = new Date().toISOString();
+    draft.liveSync = { provider: 'ESPN', lastSyncedAt: new Date().toISOString(), protocol: LIVE_SYNC_PROTOCOL };
+    liveSync.lastAppliedCount = additions.length;
+    persist();
+    renderAll();
+    return true;
+  }
+
+  function liveSyncStatusWord() {
+    if (!liveSync.lastMessageAt) return 'not connected';
+    if (Date.now() - liveSync.lastMessageAt > 7000) return 'reconnect needed';
+    if (liveSync.paused) return 'paused';
+    if (liveSync.error || liveSync.conflict || liveSync.unresolved.length) return 'needs attention';
+    return 'connected';
+  }
+
+  function sendLiveSyncAck(event) {
+    try {
+      event.source?.postMessage({
+        type: LIVE_SYNC_ACK,
+        protocol: LIVE_SYNC_PROTOCOL,
+        status: liveSyncStatusWord(),
+        appPicks: state.currentDraft?.picks?.length || 0,
+        espnPicks: liveSync.lastPayload?.picks?.length || 0
+      }, event.origin);
+    } catch (err) {
+      console.warn('Could not acknowledge ESPN sync message', err);
+    }
+  }
+
+  function handleEspnSyncMessage(event) {
+    if (!allowedEspnSyncOrigin(event.origin)) return;
+    const payload = event.data;
+    if (!payload || payload.type !== LIVE_SYNC_MESSAGE || Number(payload.protocol) !== LIVE_SYNC_PROTOCOL) return;
+    if (!dataset || !state.currentDraft) return;
+
+    liveSync.lastMessageAt = Date.now();
+    liveSync.lastPayload = payload;
+    liveSync.sourceOrigin = event.origin;
+    reconcileEspnSyncPayload(payload, { apply: !liveSync.paused });
+    renderLiveSync();
+    sendLiveSyncAck(event);
+  }
+
+  function toggleLiveSyncPause() {
+    if (!liveSync.lastPayload) return;
+    liveSync.paused = !liveSync.paused;
+    if (!liveSync.paused) reconcileEspnSyncPayload(liveSync.lastPayload, { apply: true });
+    renderLiveSync();
+  }
+
+  function replaceDraftFromEspn() {
+    if (!liveSync.lastPayload) return;
+    const mapped = mapEspnSyncPayload(liveSync.lastPayload);
+    if (mapped.error || !mapped.history.length) {
+      liveSync.error = mapped.error || 'No complete ESPN picks are available to import yet.';
+      renderLiveSync();
+      return;
+    }
+    const lastPick = mapped.history[mapped.history.length - 1]?.pick || 0;
+    const unresolvedNote = mapped.unresolved.length ? ` ESPN also has an unresolved pick after ${lastPick}, so replacement will stop there.` : '';
+    if (!window.confirm(`Replace the app's active pick history with ESPN through overall pick ${lastPick}?${unresolvedNote}`)) return;
+
+    recordDraftProvenance(state.currentDraft);
+    state.currentDraft.picks = deepClone(mapped.history);
+    state.currentDraft.updatedAt = new Date().toISOString();
+    state.currentDraft.liveSync = { provider: 'ESPN', lastSyncedAt: new Date().toISOString(), protocol: LIVE_SYNC_PROTOCOL };
+    liveSync.lastMappedHistory = mapped.history;
+    liveSync.unresolved = mapped.unresolved;
+    liveSync.conflict = null;
+    liveSync.error = '';
+    persist();
+    renderAll();
+  }
+
+  function renderLiveSync() {
+    if (!els.liveSyncBadge) return;
+    const ageMs = liveSync.lastMessageAt ? Date.now() - liveSync.lastMessageAt : Infinity;
+    const espnCount = liveSync.lastPayload?.picks?.length || 0;
+    const appCount = state.currentDraft?.picks?.length || 0;
+    let label = 'Not connected';
+    let cls = 'idle';
+    let detail = 'Drag the ESPN Draft Sync link to Chrome\'s bookmarks bar, then click that bookmark from inside the ESPN draft room.';
+    let issue = '';
+
+    if (liveSync.lastMessageAt) {
+      if (ageMs > 7000) {
+        label = 'Reconnect needed';
+        cls = 'problem';
+        detail = `Last ESPN message ${Math.max(1, Math.round(ageMs / 1000))}s ago • ESPN ${espnCount} picks • App ${appCount} picks.`;
+        issue = 'If the ESPN page was refreshed or navigated, click the ESPN Draft Sync bookmark again.';
+      } else if (liveSync.paused) {
+        label = 'Paused';
+        cls = 'paused';
+        detail = `ESPN ${espnCount} picks • App ${appCount} picks • incoming history is being observed but not applied.`;
+      } else if (liveSync.error || liveSync.conflict || liveSync.unresolved.length) {
+        label = 'Needs attention';
+        cls = 'problem';
+        detail = `ESPN ${espnCount} picks • App ${appCount} picks • automatic reconciliation stopped before making a questionable change.`;
+        issue = liveSync.error || liveSync.conflict?.message || liveSync.unresolved[0]?.message || '';
+      } else {
+        label = 'Connected';
+        cls = 'connected';
+        const relation = appCount === espnCount ? 'in sync' : (appCount < espnCount ? `${espnCount - appCount} ESPN pick${espnCount - appCount === 1 ? '' : 's'} pending` : `app ${appCount - espnCount} pick${appCount - espnCount === 1 ? '' : 's'} ahead`);
+        detail = `ESPN ${espnCount} picks • App ${appCount} picks • ${relation} • updated ${Math.max(0, Math.round(ageMs / 1000))}s ago.`;
+      }
+    }
+
+    els.liveSyncBadge.className = `live-sync-badge ${cls}`;
+    els.liveSyncBadge.innerHTML = `<span class="live-sync-dot"></span>${escapeHtml(label)}`;
+    els.liveSyncDetail.textContent = detail;
+    els.liveSyncIssue.textContent = issue;
+    els.liveSyncPauseBtn.disabled = !liveSync.lastPayload;
+    els.liveSyncPauseBtn.textContent = liveSync.paused ? 'Resume sync' : 'Pause sync';
+    els.liveSyncResyncBtn.disabled = !liveSync.lastPayload || !liveSync.lastMappedHistory.length;
   }
 
   function nextUserPick(startInclusive, draft = state.currentDraft) {
@@ -1252,6 +1699,7 @@
     renderHistory();
     renderMocks();
     renderData();
+    renderLiveSync();
     els.undoBtn.disabled = state.currentDraft.picks.length === 0;
   }
 
@@ -1770,6 +2218,15 @@
       if (file) importBackupFile(file);
     });
     els.reloadRepoBackupBtn.addEventListener('click', () => reloadRepoBackup({silent:false}));
+    els.liveSyncPauseBtn.addEventListener('click', toggleLiveSyncPause);
+    els.liveSyncResyncBtn.addEventListener('click', replaceDraftFromEspn);
+    els.espnBookmarkletLink.addEventListener('click', (event) => {
+      // The href is meant to be stored as a bookmark and executed from ESPN.
+      // Prevent accidental execution while the user is still on the companion page.
+      event.preventDefault();
+      window.alert("Drag ‘ESPN Draft Sync’ to Chrome’s bookmarks bar. Then open the ESPN draft room and click that saved bookmark.");
+    });
+    window.addEventListener('message', handleEspnSyncMessage);
   }
 
   function changeLeague(newId) {
@@ -1827,6 +2284,7 @@
       dataset = await res.json();
       players = dataset.players;
       playerMap = new Map(players.map(p => [p.id,p]));
+      buildLiveSyncPlayerIndexes();
       leagueModels = Object.fromEntries(Object.entries(LEAGUES).map(([id,config]) => [id,computeLeagueModel(config)]));
       tiers = computeTiers();
       loadLocalState();
@@ -1837,7 +2295,9 @@
       if (!hadLocalMocks && !hadLocalPicks) await reloadRepoBackup({silent:true});
 
       els.positionFilters.querySelectorAll('.pill').forEach(p => p.classList.toggle('active', p.dataset.pos === state.activePosition));
+      setupEspnBookmarklet();
       renderAll();
+      window.setInterval(renderLiveSync, 1000);
     } catch (err) {
       console.error(err);
       document.querySelector('main').innerHTML = `<section class="panel" style="padding:24px"><h2>Could not load the draft tool</h2><p>${escapeHtml(err.message)}</p><p class="footnote">If you opened index.html directly from your filesystem, serve this folder with a simple local web server or use GitHub Pages.</p></section>`;
