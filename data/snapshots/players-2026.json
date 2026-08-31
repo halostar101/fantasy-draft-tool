@@ -2,14 +2,13 @@
   "metadata": {
     "season": 2026,
     "source": "ESPN Pre-Draft Strategy PDF supplied by user",
-    "sourceCapturedAt": "2026-08-30T20:10:00-04:00",
+    "sourceCapturedAt": "2026-08-28T09:51:00-04:00",
     "scoringLabel": "Half PPR (per user; projected FPTS are taken from the supplied ESPN table)",
     "playerCount": 400,
-    "modelDataVersion": "2026-08-30-v1",
+    "modelDataVersion": "2026-08-28-v1",
     "notes": [
       "ESPN overall rank is used as a market/draft-order proxy; the supplied PDF does not contain ADP.",
-      "Stable internal player IDs are preserved by player identity from the prior 2026-08-28 dataset.",
-      "Josh Jacobs is ESPN rank 58 with status O in this snapshot; MarShawn Lloyd is ESPN rank 85."
+      "Stable internal player IDs are preserved by player identity from the prior 2026-08-26 dataset; newly appearing players receive new IDs and removed players keep their old IDs unused."
     ]
   },
   "players": [
@@ -825,6 +824,33 @@
     },
     {
       "rank": 31,
+      "name": "Josh Jacobs",
+      "team": "GB",
+      "position": "RB",
+      "eligibility": [
+        "RB"
+      ],
+      "injuryStatus": "Q",
+      "projectedPoints": 241.1,
+      "stats": {
+        "passingYards": 0,
+        "passingTD": 0,
+        "interceptionsThrown": 0,
+        "rushingYards": 1144,
+        "rushingTD": 12,
+        "receptions": 36,
+        "receivingYards": 280,
+        "receivingTD": 2,
+        "defensiveInterceptions": 0,
+        "fumbleRecoveries": 0,
+        "pointsAllowed": 0,
+        "yardsAllowed": 0,
+        "fantasyPoints": 241.1
+      },
+      "id": "p030"
+    },
+    {
+      "rank": 32,
       "name": "Javonte Williams",
       "team": "DAL",
       "position": "RB",
@@ -851,7 +877,7 @@
       "id": "p031"
     },
     {
-      "rank": 32,
+      "rank": 33,
       "name": "Malik Nabers",
       "team": "NYG",
       "position": "WR",
@@ -878,7 +904,7 @@
       "id": "p029"
     },
     {
-      "rank": 33,
+      "rank": 34,
       "name": "Kyren Williams",
       "team": "LAR",
       "position": "RB",
@@ -905,7 +931,7 @@
       "id": "p038"
     },
     {
-      "rank": 34,
+      "rank": 35,
       "name": "Tetairoa McMillan",
       "team": "CAR",
       "position": "WR",
@@ -932,7 +958,7 @@
       "id": "p033"
     },
     {
-      "rank": 35,
+      "rank": 36,
       "name": "DeVonta Smith",
       "team": "PHI",
       "position": "WR",
@@ -959,7 +985,7 @@
       "id": "p035"
     },
     {
-      "rank": 36,
+      "rank": 37,
       "name": "Zay Flowers",
       "team": "BAL",
       "position": "WR",
@@ -986,7 +1012,7 @@
       "id": "p034"
     },
     {
-      "rank": 37,
+      "rank": 38,
       "name": "Emeka Egbuka",
       "team": "TB",
       "position": "WR",
@@ -1013,7 +1039,7 @@
       "id": "p042"
     },
     {
-      "rank": 38,
+      "rank": 39,
       "name": "Travis Etienne Jr.",
       "team": "NO",
       "position": "RB",
@@ -1040,7 +1066,7 @@
       "id": "p037"
     },
     {
-      "rank": 39,
+      "rank": 40,
       "name": "Ladd McConkey",
       "team": "LAC",
       "position": "WR",
@@ -1067,7 +1093,7 @@
       "id": "p044"
     },
     {
-      "rank": 40,
+      "rank": 41,
       "name": "Quinshon Judkins",
       "team": "CLE",
       "position": "RB",
@@ -1094,7 +1120,7 @@
       "id": "p039"
     },
     {
-      "rank": 41,
+      "rank": 42,
       "name": "Colston Loveland",
       "team": "CHI",
       "position": "TE",
@@ -1121,7 +1147,7 @@
       "id": "p049"
     },
     {
-      "rank": 42,
+      "rank": 43,
       "name": "Tee Higgins",
       "team": "CIN",
       "position": "WR",
@@ -1148,7 +1174,7 @@
       "id": "p046"
     },
     {
-      "rank": 43,
+      "rank": 44,
       "name": "Davante Adams",
       "team": "LAR",
       "position": "WR",
@@ -1175,7 +1201,7 @@
       "id": "p043"
     },
     {
-      "rank": 44,
+      "rank": 45,
       "name": "Jaylen Waddle",
       "team": "DEN",
       "position": "WR",
@@ -1202,7 +1228,7 @@
       "id": "p047"
     },
     {
-      "rank": 45,
+      "rank": 46,
       "name": "Cam Skattebo",
       "team": "NYG",
       "position": "RB",
@@ -1229,7 +1255,7 @@
       "id": "p040"
     },
     {
-      "rank": 46,
+      "rank": 47,
       "name": "D'Andre Swift",
       "team": "CHI",
       "position": "RB",
@@ -1256,7 +1282,7 @@
       "id": "p060"
     },
     {
-      "rank": 47,
+      "rank": 48,
       "name": "Lamar Jackson",
       "team": "BAL",
       "position": "QB",
@@ -1283,7 +1309,7 @@
       "id": "p056"
     },
     {
-      "rank": 48,
+      "rank": 49,
       "name": "Bhayshul Tuten",
       "team": "JAX",
       "position": "RB",
@@ -1310,7 +1336,7 @@
       "id": "p059"
     },
     {
-      "rank": 49,
+      "rank": 50,
       "name": "Bucky Irving",
       "team": "TB",
       "position": "RB",
@@ -1337,7 +1363,7 @@
       "id": "p041"
     },
     {
-      "rank": 50,
+      "rank": 51,
       "name": "Terry McLaurin",
       "team": "WSH",
       "position": "WR",
@@ -1364,7 +1390,7 @@
       "id": "p045"
     },
     {
-      "rank": 51,
+      "rank": 52,
       "name": "Jameson Williams",
       "team": "DET",
       "position": "WR",
@@ -1391,7 +1417,7 @@
       "id": "p051"
     },
     {
-      "rank": 52,
+      "rank": 53,
       "name": "David Montgomery",
       "team": "HOU",
       "position": "RB",
@@ -1418,7 +1444,7 @@
       "id": "p061"
     },
     {
-      "rank": 53,
+      "rank": 54,
       "name": "Rome Odunze",
       "team": "CHI",
       "position": "WR",
@@ -1445,7 +1471,7 @@
       "id": "p048"
     },
     {
-      "rank": 54,
+      "rank": 55,
       "name": "Tyler Warren",
       "team": "IND",
       "position": "TE",
@@ -1472,7 +1498,7 @@
       "id": "p050"
     },
     {
-      "rank": 55,
+      "rank": 56,
       "name": "DJ Moore",
       "team": "BUF",
       "position": "WR",
@@ -1499,7 +1525,7 @@
       "id": "p052"
     },
     {
-      "rank": 56,
+      "rank": 57,
       "name": "Jayden Daniels",
       "team": "WSH",
       "position": "QB",
@@ -1526,7 +1552,7 @@
       "id": "p055"
     },
     {
-      "rank": 57,
+      "rank": 58,
       "name": "Drake Maye",
       "team": "NE",
       "position": "QB",
@@ -1551,33 +1577,6 @@
         "fantasyPoints": 319.4
       },
       "id": "p057"
-    },
-    {
-      "rank": 58,
-      "name": "Josh Jacobs",
-      "team": "GB",
-      "position": "RB",
-      "eligibility": [
-        "RB"
-      ],
-      "injuryStatus": "O",
-      "projectedPoints": 241.1,
-      "stats": {
-        "passingYards": 0,
-        "passingTD": 0,
-        "interceptionsThrown": 0,
-        "rushingYards": 1144,
-        "rushingTD": 12,
-        "receptions": 36,
-        "receivingYards": 280,
-        "receivingTD": 2,
-        "defensiveInterceptions": 0,
-        "fumbleRecoveries": 0,
-        "pointsAllowed": 0,
-        "yardsAllowed": 0,
-        "fantasyPoints": 241.1
-      },
-      "id": "p030"
     },
     {
       "rank": 59,
@@ -2283,33 +2282,6 @@
     },
     {
       "rank": 85,
-      "name": "MarShawn Lloyd",
-      "team": "GB",
-      "position": "RB",
-      "eligibility": [
-        "RB"
-      ],
-      "injuryStatus": null,
-      "projectedPoints": 78.3,
-      "stats": {
-        "passingYards": 0,
-        "passingTD": 0,
-        "interceptionsThrown": 0,
-        "rushingYards": 381,
-        "rushingTD": 3,
-        "receptions": 16,
-        "receivingYards": 114,
-        "receivingTD": 1,
-        "defensiveInterceptions": 0,
-        "fumbleRecoveries": 0,
-        "pointsAllowed": 0,
-        "yardsAllowed": 0,
-        "fantasyPoints": 78.3
-      },
-      "id": "p196"
-    },
-    {
-      "rank": 86,
       "name": "Jaxson Dart",
       "team": "NYG",
       "position": "QB",
@@ -2336,7 +2308,7 @@
       "id": "p075"
     },
     {
-      "rank": 87,
+      "rank": 86,
       "name": "Justin Herbert",
       "team": "LAC",
       "position": "QB",
@@ -2363,7 +2335,7 @@
       "id": "p094"
     },
     {
-      "rank": 88,
+      "rank": 87,
       "name": "Jonathon Brooks",
       "team": "CAR",
       "position": "RB",
@@ -2390,7 +2362,7 @@
       "id": "p100"
     },
     {
-      "rank": 89,
+      "rank": 88,
       "name": "Wan'Dale Robinson",
       "team": "TEN",
       "position": "WR",
@@ -2417,7 +2389,7 @@
       "id": "p088"
     },
     {
-      "rank": 90,
+      "rank": 89,
       "name": "Trevor Lawrence",
       "team": "JAX",
       "position": "QB",
@@ -2444,7 +2416,7 @@
       "id": "p082"
     },
     {
-      "rank": 91,
+      "rank": 90,
       "name": "Aaron Jones Sr.",
       "team": "MIN",
       "position": "RB",
@@ -2471,7 +2443,7 @@
       "id": "p116"
     },
     {
-      "rank": 92,
+      "rank": 91,
       "name": "Travis Hunter",
       "team": "JAX",
       "position": "WR",
@@ -2498,7 +2470,7 @@
       "id": "p091"
     },
     {
-      "rank": 93,
+      "rank": 92,
       "name": "Rachaad White",
       "team": "WSH",
       "position": "RB",
@@ -2525,7 +2497,7 @@
       "id": "p109"
     },
     {
-      "rank": 94,
+      "rank": 93,
       "name": "Alec Pierce",
       "team": "IND",
       "position": "WR",
@@ -2552,7 +2524,7 @@
       "id": "p070"
     },
     {
-      "rank": 95,
+      "rank": 94,
       "name": "Brian Thomas Jr.",
       "team": "JAX",
       "position": "WR",
@@ -2579,7 +2551,7 @@
       "id": "p080"
     },
     {
-      "rank": 96,
+      "rank": 95,
       "name": "Jakobi Meyers",
       "team": "JAX",
       "position": "WR",
@@ -2606,7 +2578,7 @@
       "id": "p081"
     },
     {
-      "rank": 97,
+      "rank": 96,
       "name": "Matthew Golden",
       "team": "GB",
       "position": "WR",
@@ -2633,7 +2605,7 @@
       "id": "p078"
     },
     {
-      "rank": 98,
+      "rank": 97,
       "name": "Chris Godwin Jr.",
       "team": "TB",
       "position": "WR",
@@ -2660,7 +2632,7 @@
       "id": "p128"
     },
     {
-      "rank": 99,
+      "rank": 98,
       "name": "Jordan Addison",
       "team": "MIN",
       "position": "WR",
@@ -2687,7 +2659,7 @@
       "id": "p089"
     },
     {
-      "rank": 100,
+      "rank": 99,
       "name": "Caleb Williams",
       "team": "CHI",
       "position": "QB",
@@ -2714,7 +2686,7 @@
       "id": "p087"
     },
     {
-      "rank": 101,
+      "rank": 100,
       "name": "Kyle Monangai",
       "team": "CHI",
       "position": "RB",
@@ -2741,7 +2713,7 @@
       "id": "p107"
     },
     {
-      "rank": 102,
+      "rank": 101,
       "name": "J.K. Dobbins",
       "team": "DEN",
       "position": "RB",
@@ -2768,7 +2740,7 @@
       "id": "p106"
     },
     {
-      "rank": 103,
+      "rank": 102,
       "name": "Brock Purdy",
       "team": "SF",
       "position": "QB",
@@ -2795,7 +2767,7 @@
       "id": "p085"
     },
     {
-      "rank": 104,
+      "rank": 103,
       "name": "RJ Harvey",
       "team": "DEN",
       "position": "RB",
@@ -2822,7 +2794,7 @@
       "id": "p123"
     },
     {
-      "rank": 105,
+      "rank": 104,
       "name": "Tucker Kraft",
       "team": "GB",
       "position": "TE",
@@ -2849,7 +2821,7 @@
       "id": "p102"
     },
     {
-      "rank": 106,
+      "rank": 105,
       "name": "Josh Downs",
       "team": "IND",
       "position": "WR",
@@ -2876,7 +2848,7 @@
       "id": "p114"
     },
     {
-      "rank": 107,
+      "rank": 106,
       "name": "Quentin Johnston",
       "team": "LAC",
       "position": "WR",
@@ -2903,7 +2875,7 @@
       "id": "p113"
     },
     {
-      "rank": 108,
+      "rank": 107,
       "name": "Travis Kelce",
       "team": "KC",
       "position": "TE",
@@ -2930,7 +2902,7 @@
       "id": "p105"
     },
     {
-      "rank": 109,
+      "rank": 108,
       "name": "Patrick Mahomes",
       "team": "KC",
       "position": "QB",
@@ -2957,7 +2929,7 @@
       "id": "p095"
     },
     {
-      "rank": 110,
+      "rank": 109,
       "name": "Blake Corum",
       "team": "LAR",
       "position": "RB",
@@ -2984,7 +2956,7 @@
       "id": "p122"
     },
     {
-      "rank": 111,
+      "rank": 110,
       "name": "Jake Ferguson",
       "team": "DAL",
       "position": "TE",
@@ -3011,7 +2983,7 @@
       "id": "p110"
     },
     {
-      "rank": 112,
+      "rank": 111,
       "name": "Makai Lemon",
       "team": "PHI",
       "position": "WR",
@@ -3038,7 +3010,7 @@
       "id": "p126"
     },
     {
-      "rank": 113,
+      "rank": 112,
       "name": "Tyjae Spears",
       "team": "TEN",
       "position": "RB",
@@ -3065,7 +3037,7 @@
       "id": "p140"
     },
     {
-      "rank": 114,
+      "rank": 113,
       "name": "Bo Nix",
       "team": "DEN",
       "position": "QB",
@@ -3092,7 +3064,7 @@
       "id": "p084"
     },
     {
-      "rank": 115,
+      "rank": 114,
       "name": "Dallas Goedert",
       "team": "PHI",
       "position": "TE",
@@ -3119,7 +3091,7 @@
       "id": "p104"
     },
     {
-      "rank": 116,
+      "rank": 115,
       "name": "Matthew Stafford",
       "team": "LAR",
       "position": "QB",
@@ -3146,7 +3118,7 @@
       "id": "p086"
     },
     {
-      "rank": 117,
+      "rank": 116,
       "name": "Kyler Murray",
       "team": "MIN",
       "position": "QB",
@@ -3173,7 +3145,7 @@
       "id": "p134"
     },
     {
-      "rank": 118,
+      "rank": 117,
       "name": "Jacory Croskey-Merritt",
       "team": "WSH",
       "position": "RB",
@@ -3200,7 +3172,7 @@
       "id": "p108"
     },
     {
-      "rank": 119,
+      "rank": 118,
       "name": "Brandon Aubrey",
       "team": "DAL",
       "position": "K",
@@ -3227,7 +3199,7 @@
       "id": "p181"
     },
     {
-      "rank": 120,
+      "rank": 119,
       "name": "Isaiah Likely",
       "team": "NYG",
       "position": "TE",
@@ -3254,7 +3226,7 @@
       "id": "p117"
     },
     {
-      "rank": 121,
+      "rank": 120,
       "name": "Khalil Shakir",
       "team": "BUF",
       "position": "WR",
@@ -3281,7 +3253,7 @@
       "id": "p090"
     },
     {
-      "rank": 122,
+      "rank": 121,
       "name": "Jayden Reed",
       "team": "GB",
       "position": "WR",
@@ -3308,14 +3280,14 @@
       "id": "p092"
     },
     {
-      "rank": 123,
+      "rank": 122,
       "name": "Xavier Worthy",
       "team": "KC",
       "position": "WR",
       "eligibility": [
         "WR"
       ],
-      "injuryStatus": null,
+      "injuryStatus": "Q",
       "projectedPoints": 145.9,
       "stats": {
         "passingYards": 0,
@@ -3335,7 +3307,7 @@
       "id": "p093"
     },
     {
-      "rank": 124,
+      "rank": 123,
       "name": "De'Zhaun Stribling",
       "team": "SF",
       "position": "WR",
@@ -3362,7 +3334,7 @@
       "id": "p130"
     },
     {
-      "rank": 125,
+      "rank": 124,
       "name": "Mark Andrews",
       "team": "BAL",
       "position": "TE",
@@ -3389,7 +3361,7 @@
       "id": "p111"
     },
     {
-      "rank": 126,
+      "rank": 125,
       "name": "Romeo Doubs",
       "team": "NE",
       "position": "WR",
@@ -3416,7 +3388,7 @@
       "id": "p129"
     },
     {
-      "rank": 127,
+      "rank": 126,
       "name": "Jalen Coker",
       "team": "CAR",
       "position": "WR",
@@ -3443,7 +3415,7 @@
       "id": "p132"
     },
     {
-      "rank": 128,
+      "rank": 127,
       "name": "Dalton Kincaid",
       "team": "BUF",
       "position": "TE",
@@ -3470,7 +3442,7 @@
       "id": "p118"
     },
     {
-      "rank": 129,
+      "rank": 128,
       "name": "Tyler Shough",
       "team": "NO",
       "position": "QB",
@@ -3497,7 +3469,7 @@
       "id": "p135"
     },
     {
-      "rank": 130,
+      "rank": 129,
       "name": "Jared Goff",
       "team": "DET",
       "position": "QB",
@@ -3524,7 +3496,7 @@
       "id": "p136"
     },
     {
-      "rank": 131,
+      "rank": 130,
       "name": "Jordan Mason",
       "team": "MIN",
       "position": "RB",
@@ -3551,7 +3523,7 @@
       "id": "p121"
     },
     {
-      "rank": 132,
+      "rank": 131,
       "name": "Zach Charbonnet",
       "team": "SEA",
       "position": "RB",
@@ -3578,7 +3550,7 @@
       "id": "p138"
     },
     {
-      "rank": 133,
+      "rank": 132,
       "name": "Deebo Samuel Sr.",
       "team": "SF",
       "position": "WR",
@@ -3605,7 +3577,7 @@
       "id": "p115"
     },
     {
-      "rank": 134,
+      "rank": 133,
       "name": "KC Concepcion",
       "team": "CLE",
       "position": "WR",
@@ -3632,7 +3604,7 @@
       "id": "p127"
     },
     {
-      "rank": 135,
+      "rank": 134,
       "name": "Woody Marks",
       "team": "HOU",
       "position": "RB",
@@ -3659,7 +3631,7 @@
       "id": "p124"
     },
     {
-      "rank": 136,
+      "rank": 135,
       "name": "Isiah Pacheco",
       "team": "DET",
       "position": "RB",
@@ -3686,7 +3658,7 @@
       "id": "p155"
     },
     {
-      "rank": 137,
+      "rank": 136,
       "name": "Jalen McMillan",
       "team": "TB",
       "position": "WR",
@@ -3713,7 +3685,7 @@
       "id": "p146"
     },
     {
-      "rank": 138,
+      "rank": 137,
       "name": "Alvin Kamara",
       "team": "NO",
       "position": "RB",
@@ -3740,7 +3712,7 @@
       "id": "p139"
     },
     {
-      "rank": 139,
+      "rank": 138,
       "name": "Baker Mayfield",
       "team": "TB",
       "position": "QB",
@@ -3767,14 +3739,14 @@
       "id": "p150"
     },
     {
-      "rank": 140,
+      "rank": 139,
       "name": "Tank Dell",
       "team": "HOU",
       "position": "WR",
       "eligibility": [
         "WR"
       ],
-      "injuryStatus": "IR",
+      "injuryStatus": "Q",
       "projectedPoints": 78.6,
       "stats": {
         "passingYards": 0,
@@ -3794,7 +3766,7 @@
       "id": "p131"
     },
     {
-      "rank": 141,
+      "rank": 140,
       "name": "Daniel Jones",
       "team": "IND",
       "position": "QB",
@@ -3821,7 +3793,7 @@
       "id": "p137"
     },
     {
-      "rank": 142,
+      "rank": 141,
       "name": "Texans D/ST",
       "team": "HOU",
       "position": "D/ST",
@@ -3848,7 +3820,7 @@
       "id": "p169"
     },
     {
-      "rank": 143,
+      "rank": 142,
       "name": "Cameron Dicker",
       "team": "LAC",
       "position": "K",
@@ -3875,7 +3847,7 @@
       "id": "p182"
     },
     {
-      "rank": 144,
+      "rank": 143,
       "name": "Broncos D/ST",
       "team": "DEN",
       "position": "D/ST",
@@ -3902,7 +3874,7 @@
       "id": "p170"
     },
     {
-      "rank": 145,
+      "rank": 144,
       "name": "Chris Rodriguez Jr.",
       "team": "JAX",
       "position": "RB",
@@ -3929,7 +3901,7 @@
       "id": "p141"
     },
     {
-      "rank": 146,
+      "rank": 145,
       "name": "Tyler Allgeier",
       "team": "ARI",
       "position": "RB",
@@ -3956,7 +3928,7 @@
       "id": "p143"
     },
     {
-      "rank": 147,
+      "rank": 146,
       "name": "Jason Myers",
       "team": "SEA",
       "position": "K",
@@ -3983,7 +3955,7 @@
       "id": "p183"
     },
     {
-      "rank": 148,
+      "rank": 147,
       "name": "Dylan Sampson",
       "team": "CLE",
       "position": "RB",
@@ -4010,7 +3982,7 @@
       "id": "p166"
     },
     {
-      "rank": 149,
+      "rank": 148,
       "name": "Ka'imi Fairbairn",
       "team": "HOU",
       "position": "K",
@@ -4037,7 +4009,7 @@
       "id": "p185"
     },
     {
-      "rank": 150,
+      "rank": 149,
       "name": "Juwan Johnson",
       "team": "NO",
       "position": "TE",
@@ -4064,7 +4036,7 @@
       "id": "p160"
     },
     {
-      "rank": 151,
+      "rank": 150,
       "name": "T.J. Hockenson",
       "team": "MIN",
       "position": "TE",
@@ -4091,7 +4063,7 @@
       "id": "p112"
     },
     {
-      "rank": 152,
+      "rank": 151,
       "name": "Justice Hill",
       "team": "BAL",
       "position": "RB",
@@ -4118,7 +4090,7 @@
       "id": "p195"
     },
     {
-      "rank": 153,
+      "rank": 152,
       "name": "Eddy Pineiro",
       "team": "SF",
       "position": "K",
@@ -4145,7 +4117,7 @@
       "id": "p186"
     },
     {
-      "rank": 154,
+      "rank": 153,
       "name": "Hunter Henry",
       "team": "NE",
       "position": "TE",
@@ -4172,7 +4144,7 @@
       "id": "p120"
     },
     {
-      "rank": 155,
+      "rank": 154,
       "name": "Kenyon Sadiq",
       "team": "NYJ",
       "position": "TE",
@@ -4199,7 +4171,7 @@
       "id": "p119"
     },
     {
-      "rank": 156,
+      "rank": 155,
       "name": "Keenan Allen",
       "team": "IND",
       "position": "WR",
@@ -4226,7 +4198,7 @@
       "id": "p162"
     },
     {
-      "rank": 157,
+      "rank": 156,
       "name": "Jordan Love",
       "team": "GB",
       "position": "QB",
@@ -4253,7 +4225,7 @@
       "id": "p198"
     },
     {
-      "rank": 158,
+      "rank": 157,
       "name": "Calvin Ridley",
       "team": "TEN",
       "position": "WR",
@@ -4278,6 +4250,33 @@
         "fantasyPoints": 113.7
       },
       "id": "p147"
+    },
+    {
+      "rank": 158,
+      "name": "MarShawn Lloyd",
+      "team": "GB",
+      "position": "RB",
+      "eligibility": [
+        "RB"
+      ],
+      "injuryStatus": null,
+      "projectedPoints": 78.3,
+      "stats": {
+        "passingYards": 0,
+        "passingTD": 0,
+        "interceptionsThrown": 0,
+        "rushingYards": 381,
+        "rushingTD": 3,
+        "receptions": 16,
+        "receivingYards": 114,
+        "receivingTD": 1,
+        "defensiveInterceptions": 0,
+        "fumbleRecoveries": 0,
+        "pointsAllowed": 0,
+        "yardsAllowed": 0,
+        "fantasyPoints": 78.3
+      },
+      "id": "p196"
     },
     {
       "rank": 159,
@@ -4584,7 +4583,7 @@
       "eligibility": [
         "WR"
       ],
-      "injuryStatus": "IR",
+      "injuryStatus": "D",
       "projectedPoints": 82.0,
       "stats": {
         "passingYards": 0,
@@ -6501,7 +6500,7 @@
       "eligibility": [
         "RB"
       ],
-      "injuryStatus": "Q",
+      "injuryStatus": null,
       "projectedPoints": 34.9,
       "stats": {
         "passingYards": 0,
@@ -6582,7 +6581,7 @@
       "eligibility": [
         "RB"
       ],
-      "injuryStatus": null,
+      "injuryStatus": "Q",
       "projectedPoints": 23.3,
       "stats": {
         "passingYards": 0,
@@ -6717,7 +6716,7 @@
       "eligibility": [
         "RB"
       ],
-      "injuryStatus": "IR",
+      "injuryStatus": "Q",
       "projectedPoints": 0.0,
       "stats": {
         "passingYards": null,
@@ -7095,7 +7094,7 @@
       "eligibility": [
         "WR"
       ],
-      "injuryStatus": "Q",
+      "injuryStatus": null,
       "projectedPoints": 57.9,
       "stats": {
         "passingYards": 0,
@@ -7554,7 +7553,7 @@
       "eligibility": [
         "RB"
       ],
-      "injuryStatus": "Q",
+      "injuryStatus": null,
       "projectedPoints": 14.7,
       "stats": {
         "passingYards": 0,
@@ -7630,7 +7629,7 @@
     {
       "rank": 283,
       "name": "Kaleb Johnson",
-      "team": "GB",
+      "team": "PIT",
       "position": "RB",
       "eligibility": [
         "RB"
@@ -9142,13 +9141,13 @@
     {
       "rank": 339,
       "name": "Nick Mullens",
-      "team": "FA",
+      "team": "JAX",
       "position": "QB",
       "eligibility": [
         "QB"
       ],
       "injuryStatus": null,
-      "projectedPoints": null,
+      "projectedPoints": 10.3,
       "stats": {
         "passingYards": 179,
         "passingTD": 1,
@@ -9162,20 +9161,20 @@
         "fumbleRecoveries": 0,
         "pointsAllowed": 0,
         "yardsAllowed": 0,
-        "fantasyPoints": null
+        "fantasyPoints": 10.3
       },
       "id": "p339"
     },
     {
       "rank": 340,
       "name": "Jake Browning",
-      "team": "FA",
+      "team": "TB",
       "position": "QB",
       "eligibility": [
         "QB"
       ],
       "injuryStatus": null,
-      "projectedPoints": null,
+      "projectedPoints": 10.3,
       "stats": {
         "passingYards": 163,
         "passingTD": 1,
@@ -9189,7 +9188,7 @@
         "fumbleRecoveries": 0,
         "pointsAllowed": 0,
         "yardsAllowed": 0,
-        "fantasyPoints": null
+        "fantasyPoints": 10.3
       },
       "id": "p340"
     },
@@ -9957,7 +9956,7 @@
       "eligibility": [
         "WR"
       ],
-      "injuryStatus": "IR",
+      "injuryStatus": null,
       "projectedPoints": 50.3,
       "stats": {
         "passingYards": 0,
@@ -10281,7 +10280,7 @@
       "eligibility": [
         "TE"
       ],
-      "injuryStatus": null,
+      "injuryStatus": "Q",
       "projectedPoints": 32.5,
       "stats": {
         "passingYards": 0,
@@ -10308,7 +10307,7 @@
       "eligibility": [
         "TE"
       ],
-      "injuryStatus": "Q",
+      "injuryStatus": null,
       "projectedPoints": 30.9,
       "stats": {
         "passingYards": 0,

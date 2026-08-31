@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '2.7.0';
+  const APP_VERSION = '2.7.1';
 
   const STORAGE = {
     current: 'fantasy-draft-tool:v1:currentDraft',
@@ -888,17 +888,17 @@
     return { current, onClock, decisionPick, followingPick };
   }
 
-  function expectedAlternative(player, availablePlayers, targetPick) {
-    const same = availablePlayers.filter(p => p.id !== player.id && p.position === player.position && Number.isFinite(p.projectedPoints));
+  function expectedAlternative(player, availablePlayers, targetPick, draft = state.currentDraft) {
+    const same = availablePlayers.filter(p => p.id !== player.id && p.position === player.position && Number.isFinite(p.projectedPoints) && !isTemporarilySuppressedUserTarget(p, targetPick, draft));
     if (!same.length || !targetPick) return null;
     const atOrAfter = same.filter(p => p.rank >= targetPick).sort((a,b) => a.rank - b.rank);
     if (atOrAfter.length) return atOrAfter[0];
     return same.sort((a,b) => b.rank - a.rank)[0];
   }
 
-  function expectedBestPositionProjectionAtPick(position, availablePlayers, fromPick, targetPick) {
+  function expectedBestPositionProjectionAtPick(position, availablePlayers, fromPick, targetPick, draft = state.currentDraft) {
     if (!targetPick || targetPick <= fromPick) return { expectedProjection:0, likelyPlayer:null, likelyProbability:0 };
-    const options = availablePlayers.filter(p => p.position === position && Number.isFinite(p.projectedPoints))
+    const options = availablePlayers.filter(p => p.position === position && Number.isFinite(p.projectedPoints) && !isTemporarilySuppressedUserTarget(p, targetPick, draft))
       .map(p => ({
         player: p,
         projection: p.projectedPoints,
@@ -932,7 +932,7 @@
     // he survives, he can still be the best option; if he goes, comparable tier-mates can
     // preserve much of the position's value. This deliberately does not replace the
     // player-specific Gone metric shown on the Draft Board.
-    const options = availablePlayers.filter(p => p.position === position && Number.isFinite(p.projectedPoints))
+    const options = availablePlayers.filter(p => p.position === position && Number.isFinite(p.projectedPoints) && !isTemporarilySuppressedUserTarget(p, targetPick, draft))
       .map(p => {
         const value = marginalRosterValue(p, rosterPlayers, draft).decisionValue;
         return {
@@ -975,7 +975,7 @@
     const forecasts = futurePicks.map((pick, i) => ({
       turn:i + 1,
       pick,
-      ...expectedBestPositionProjectionAtPick(position, availablePlayers, fromPick, pick)
+      ...expectedBestPositionProjectionAtPick(position, availablePlayers, fromPick, pick, draft)
     }));
     return { position, fromPick, forecasts };
   }
@@ -1055,7 +1055,7 @@
     // while ignoring the fact that Gibbs first had to survive picks 1-10.
     const survivalFromPick = context.onClock ? context.decisionPick : context.current;
 
-    return availablePlayers.filter(p => Number.isFinite(p.projectedPoints)).map(p => {
+    return availablePlayers.filter(p => Number.isFinite(p.projectedPoints) && !isTemporarilySuppressedUserTarget(p, context.followingPick, draft)).map(p => {
       const survival = 1 - conditionalGoneProbability(p, survivalFromPick, context.followingPick);
       const structural = Math.max(model.vols.get(p.id) || 0, MODEL.benchVorpWeight * Math.max(0, model.vorp.get(p.id) || 0));
       const prior = model.marketPrior.get(p.id) || 0;
@@ -1075,7 +1075,7 @@
     const depthByPosition = new Map(ALL_POSITIONS.map(pos => [pos, positionDepthForecast(pos, poolPlayers, draft, nextContext)]));
     const options = nextPickPool.filter(x => x.player.id !== firstPlayer.id).map(x => {
       const value = marginalRosterValue(x.player, nextRoster, draft);
-      const alt = afterNextPick ? expectedAlternative(x.player, poolPlayers, afterNextPick) : null;
+      const alt = afterNextPick ? expectedAlternative(x.player, poolPlayers, afterNextPick, draft) : null;
       const altValue = alt ? marginalRosterValue(alt, nextRoster, draft).decisionValue : null;
       const waitCost = Number.isFinite(altValue) ? (value.decisionValue || 0) - altValue : 0;
       const gone = afterNextPick ? conditionalGoneProbability(x.player, context.followingPick, afterNextPick) : 1;
@@ -1146,6 +1146,15 @@
 
   function roundAtPick(overallPick, draft = state.currentDraft) {
     return Math.floor((Math.max(1, overallPick) - 1) / configFor(draft).teams) + 1;
+  }
+
+  // Emergency draft-day override: Josh Jacobs' Commissioner Exempt status made the
+  // stored projection/rank temporarily unsuitable for user recommendations. Keep him
+  // visible on the Draft Board and available to opponents, but do not let Decision
+  // Support or simulated user picks treat him as a target before Round 9.
+  function isTemporarilySuppressedUserTarget(player, overallPick, draft = state.currentDraft) {
+    if (!player || !overallPick) return false;
+    return player.name === 'Josh Jacobs' && roundAtPick(overallPick, draft) < 9;
   }
 
   function opponentBaseParams(overallPick, draft = state.currentDraft) {
@@ -1301,9 +1310,10 @@
     const context = { decisionPick: overallPick, followingPick: nextPick, onClock:true };
     let best = null;
     for (const p of candidates) {
+      if (isTemporarilySuppressedUserTarget(p, overallPick, draft)) continue;
       const value = marginalRosterValue(p, roster, draft);
       if (!Number.isFinite(value.decisionValue)) continue;
-      const alt = nextPick ? expectedAlternative(p, pool, nextPick) : null;
+      const alt = nextPick ? expectedAlternative(p, pool, nextPick, draft) : null;
       const altValue = alt ? marginalRosterValue(alt, roster, draft).decisionValue : null;
       const waitCost = Number.isFinite(altValue) ? value.decisionValue - altValue : 0;
       const gone = nextPick ? conditionalGoneProbability(p, overallPick, nextPick) : 1;
@@ -1620,7 +1630,7 @@
       return { player, ...value, currentValue:-Infinity, onClockScore:-Infinity, targetScore:-Infinity, pathValue:null, waitCost:null, opportunityCost:null, expectedPositionNext:null, gone:0, beforeMyPick:0, alt:null, expectedNext:null, urgency:0, tier:null };
     }
 
-    const alt = context.followingPick ? expectedAlternative(player, availablePlayers, context.followingPick) : null;
+    const alt = context.followingPick ? expectedAlternative(player, availablePlayers, context.followingPick, draft) : null;
     const altValue = alt ? marginalRosterValue(alt, rosterPlayers, draft).decisionValue : null;
     const waitCost = Number.isFinite(altValue) ? value.decisionValue - altValue : null;
     const gone = context.followingPick && context.decisionPick
@@ -1756,7 +1766,9 @@
     const positionNextValueForecasts = context.onClock && context.followingPick && context.decisionPick
       ? new Map(ALL_POSITIONS.map(pos => [pos, expectedBestPositionValueAtPick(pos, available, roster, draft, context.decisionPick, context.followingPick)]))
       : null;
-    const recs = available.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool, depthForecasts, positionNextValueForecasts))
+    const decisionPick = context.decisionPick || context.current || currentOverallPick(draft);
+    const userTargetPool = available.filter(p => !isTemporarilySuppressedUserTarget(p, decisionPick, draft));
+    const recs = userTargetPool.map(p => recommendationFor(p, available, roster, draft, context, nextPickPool, depthForecasts, positionNextValueForecasts))
       .sort((a,b) => b.currentValue - a.currentValue || a.player.rank - b.player.rank);
     recommendationCache = { key, recs };
     return recs;

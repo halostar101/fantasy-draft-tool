@@ -1,4 +1,4 @@
-# Fantasy Draft Companion (2026) — v2.7.0
+# Fantasy Draft Companion (2026) — v2.7.1
 
 A static, browser-only fantasy football draft companion built for two ESPN half-PPR leagues:
 
@@ -42,6 +42,13 @@ No backend, MySQL, Node server, or account system is required.
 
 
 
+
+## v2.7.1 draft-day hotfix
+
+- Josh Jacobs remains visible and manually draftable on the Draft Board, but Decision Support will not recommend him before Round 9.
+- Simulated user picks and same-position wait/depth alternatives also ignore Jacobs before Round 9 so his stale pre-news projection does not distort the recommended path.
+- Opponents may still draft Jacobs normally; this is intentionally a user-target suppression rather than a rewrite of the ESPN data or core model.
+- No other valuation, Gone, opponent, Monte Carlo, roster-needs, or Live Sync behavior changed.
 
 ## v2.7.0 ESPN Live Sync
 
